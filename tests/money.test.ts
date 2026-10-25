@@ -61,3 +61,11 @@ describe('formatRate', () => {
     expect(formatRate(1_240_000)).toBe('৳12.40 lakh/s');
   });
 });
+
+describe('strings', () => {
+  it('max level text follows config', async () => {
+    const { errorText } = await import('../src/config/strings');
+    const { BALANCE } = await import('../src/config/balance');
+    expect(errorText('notMaxed')).toBe(`Both buildings must be level ${BALANCE.maxLevel}.`);
+  });
+});

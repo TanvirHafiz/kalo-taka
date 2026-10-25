@@ -2,7 +2,7 @@
 // so refreshing four times a second never swallows a click.
 import { BALANCE } from '../../config/balance';
 import { BUILDABLE_CATEGORIES } from '../../config/buildings';
-import { STRINGS, fmt, type ErrorKey } from '../../config/strings';
+import { STRINGS, errorText, fmt, type ErrorKey } from '../../config/strings';
 import { canBuild, canBuyPlot, canMerge, canUpgrade } from '../../sim/actions';
 import { buildCost, buildingIncome, plotCost, tierDef, upgradeCost } from '../../sim/economy';
 import { mergeBlocker, mergeFee } from '../../sim/merge';
@@ -57,7 +57,7 @@ function viewFor(state: GameState, i: number): View {
   const maxed = b.level >= BALANCE.maxLevel;
   const buttons: ButtonSpec[] = [];
   if (maxed) {
-    buttons.push({ id: 'upgrade', label: STRINGS.plot.maxLevel, error: 'maxLevel', action: { type: 'upgrade', plot: i } });
+    buttons.push({ id: 'upgrade', label: fmt(STRINGS.plot.maxLevel, { max: BALANCE.maxLevel }), error: 'maxLevel', action: { type: 'upgrade', plot: i } });
   } else {
     buttons.push({ id: 'upgrade', label: STRINGS.plot.upgrade, cost: upgradeCost(b), error: canUpgrade(state, i), action: { type: 'upgrade', plot: i } });
   }
@@ -139,7 +139,7 @@ export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void
         btn.querySelector('.btn-label')!.textContent = spec.label;
         btn.querySelector('.btn-cost')!.textContent = spec.cost !== undefined ? formatTaka(spec.cost) : '';
         btn.disabled = spec.error !== null;
-        btn.title = spec.error ? STRINGS.errors[spec.error] : '';
+        btn.title = spec.error ? errorText(spec.error) : '';
       });
     },
   };

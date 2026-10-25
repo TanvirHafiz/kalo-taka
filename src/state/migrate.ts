@@ -1,3 +1,5 @@
+import { BALANCE } from '../config/balance';
+import { BUILDINGS, type Category } from '../config/buildings';
 import { SAVE_VERSION } from './initialState';
 import type { GameState } from './types';
 
@@ -9,6 +11,30 @@ type Raw = Record<string, unknown>;
  */
 const MIGRATIONS: Record<number, (data: Raw) => Raw> = {};
 
+function isBuilding(x: unknown): boolean {
+  if (x === null) return true;
+  if (typeof x !== 'object') return false;
+  const b = x as Raw;
+  if (typeof b.category !== 'string' || !Object.hasOwn(BUILDINGS, b.category)) return false;
+  const tiers = BUILDINGS[b.category as Category].length;
+  return (
+    Number.isInteger(b.tier) && (b.tier as number) >= 1 && (b.tier as number) <= tiers &&
+    Number.isInteger(b.level) && (b.level as number) >= 1 && (b.level as number) <= BALANCE.maxLevel
+  );
+}
+
+function isPlot(x: unknown, i: number): boolean {
+  if (typeof x !== 'object' || x === null) return false;
+  const p = x as Raw;
+  return (
+    p.index === i &&
+    (p.row === 'front' || p.row === 'back') &&
+    typeof p.owned === 'boolean' &&
+    typeof p.grabbed === 'boolean' &&
+    isBuilding(p.building)
+  );
+}
+
 function isGameState(x: unknown): x is GameState {
   if (typeof x !== 'object' || x === null) return false;
   const s = x as Raw;
@@ -19,7 +45,8 @@ function isGameState(x: unknown): x is GameState {
     Number.isFinite(s.taka) &&
     typeof s.lifetimeEarnings === 'number' &&
     typeof s.lastSimTime === 'number' &&
-    Array.isArray(s.plots)
+    Array.isArray(s.plots) &&
+    s.plots.every(isPlot)
   );
 }
 

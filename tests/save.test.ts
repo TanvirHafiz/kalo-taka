@@ -39,6 +39,15 @@ describe('save/load', () => {
     expect(migrate({ version: SAVE_VERSION, taka: 5 })).toBeNull();
   });
 
+  it('a save with an unknown building or bad tier/level is rejected', () => {
+    const s = withBuildings({ 0: tin(1) });
+    const bad = (patch: object) => ({ ...s, plots: s.plots.map((p) => (p.index === 0 ? { ...p, building: { ...tin(1), ...patch } } : p)) });
+    expect(migrate(bad({ category: 'casino' }))).toBeNull();
+    expect(migrate(bad({ tier: 99 }))).toBeNull();
+    expect(migrate(bad({ level: 0 }))).toBeNull();
+    expect(migrate(s)).toEqual(s);
+  });
+
   it('export/import base64 round-trips', () => {
     const s = withBuildings({ 0: tin(2), 1: tin(10) }, 99);
     const code = exportSave(s);

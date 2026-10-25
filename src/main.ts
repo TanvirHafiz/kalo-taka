@@ -1,6 +1,6 @@
 import './style.css';
 import { BALANCE } from './config/balance';
-import { STRINGS, fmt } from './config/strings';
+import { STRINGS, errorText, fmt } from './config/strings';
 import { createCamera, clampCamera, screenToWorldX } from './render/camera';
 import { drawCity, plotAtWorldX, worldWidth } from './render/city';
 import { applyAction } from './sim/actions';
@@ -47,7 +47,7 @@ function save(): void {
 function dispatch(action: Action): void {
   const result = applyAction(state, action);
   if (result.error) {
-    showToast(STRINGS.errors[result.error]);
+    showToast(errorText(result.error));
     return;
   }
   state = result.state;
@@ -105,6 +105,8 @@ canvas.addEventListener('pointerup', (e) => {
     panel.update(state);
   }
 });
+canvas.addEventListener('pointercancel', () => (dragging = false));
+canvas.addEventListener('lostpointercapture', () => (dragging = false));
 canvas.addEventListener('wheel', (e) => {
   cam.x += (e.deltaX || e.deltaY) / cam.zoom;
   clampCamera(cam, worldWidth(state));

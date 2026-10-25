@@ -38,11 +38,11 @@ export function totalIncome(state: GameState): number {
   return sum;
 }
 
-/** Cost to go from `level` to `level + 1`: baseCost * 1.18^level. */
+/** Cost to go from `level` to `level + 1`: baseCost * 1.18^level, rounded up to whole Taka. */
 export function upgradeCost(b: Building): number {
   const def = tierDef(b.category, b.tier);
   if (!def) return Infinity;
-  return def.baseCost * BALANCE.upgradeCostGrowth ** b.level;
+  return Math.ceil(def.baseCost * BALANCE.upgradeCostGrowth ** b.level);
 }
 
 /** Total cost of `count` consecutive upgrades from the current level (for buy-max later). */
@@ -62,5 +62,5 @@ export function plotsOwned(state: GameState): number {
 
 /** plotCost = 20000 * 1.35^plotsOwned */
 export function plotCost(state: GameState): number {
-  return BALANCE.plotCostBase * BALANCE.plotCostGrowth ** plotsOwned(state);
+  return Math.ceil(BALANCE.plotCostBase * BALANCE.plotCostGrowth ** plotsOwned(state));
 }
