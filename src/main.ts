@@ -1,8 +1,13 @@
+import '@fontsource/baloo-2/latin-600.css';
+import '@fontsource/baloo-2/latin-700.css';
+import '@fontsource/baloo-2/latin-800.css';
 import './style.css';
 import { BALANCE } from './config/balance';
 import { STRINGS, errorText, fmt } from './config/strings';
-import { createCamera, clampCamera, screenToWorldX } from './render/camera';
-import { drawCity, plotAtWorldX, worldWidth } from './render/city';
+import { clearSpriteCache } from './render/buildings/cache';
+import { ZOOM_MAX, ZOOM_MIN, createCamera, clampCamera, screenToWorldX } from './render/camera';
+import { drawCity, fitZoom, plotAtWorldX, worldWidth } from './render/city';
+import { clearSceneCache } from './render/scene';
 import { applyAction } from './sim/actions';
 import { tierDef } from './sim/economy';
 import { advance } from './sim/tick';
@@ -62,9 +67,10 @@ function dispatch(action: Action): void {
   hud.update(state);
 }
 
-// --- Resize --------------------------------------------------------------
+// --- Resize and DPR --------------------------------------------------------
+let dpr = 1;
 function resize(): void {
-  const dpr = window.devicePixelRatio || 1;
+  dpr = window.devicePixelRatio || 1;
   cam.viewW = canvas.clientWidth;
   cam.viewH = canvas.clientHeight;
   canvas.width = Math.round(cam.viewW * dpr);
@@ -73,30 +79,71 @@ function resize(): void {
   clampCamera(cam, worldWidth(state));
 }
 window.addEventListener('resize', resize);
+function watchDpr(): void {
+  const mq = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+  mq.addEventListener('change', () => {
+    clearSceneCache();
+    resize();
+    watchDpr();
+  }, { once: true });
+}
+watchDpr();
 resize();
+cam.zoom = fitZoom(cam.viewW, cam.viewH);
+clampCamera(cam, worldWidth(state));
 
-// --- Input: drag to scroll, tap to select ----------------------------------
+function zoomAt(sx: number, factor: number): void {
+  const wx = screenToWorldX(cam, sx);
+  cam.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, cam.zoom * factor));
+  cam.x = wx - sx / cam.zoom;
+  clampCamera(cam, worldWidth(state));
+}
+
+// --- Input: drag to scroll, tap to select, wheel or pinch to zoom ----------
+const pointers = new Map<number, number>();
 let dragStartX = 0;
 let dragCamX = 0;
-let dragging = false;
 let moved = 0;
+let pinchDist = 0;
 canvas.addEventListener('pointerdown', (e) => {
-  dragging = true;
-  moved = 0;
-  dragStartX = e.clientX;
-  dragCamX = cam.x;
+  pointers.set(e.pointerId, e.clientX);
   canvas.setPointerCapture(e.pointerId);
+  if (pointers.size === 1) {
+    moved = 0;
+    dragStartX = e.clientX;
+    dragCamX = cam.x;
+  } else if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    pinchDist = Math.abs(a! - b!);
+    moved = 99;
+  }
 });
 canvas.addEventListener('pointermove', (e) => {
-  if (!dragging) return;
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, e.clientX);
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.abs(a! - b!);
+    if (pinchDist > 10 && d > 10) zoomAt((a! + b!) / 2 - canvas.getBoundingClientRect().left, d / pinchDist);
+    pinchDist = d;
+    return;
+  }
   const dx = e.clientX - dragStartX;
   moved = Math.max(moved, Math.abs(dx));
   cam.x = dragCamX - dx / cam.zoom;
   clampCamera(cam, worldWidth(state));
 });
-canvas.addEventListener('pointerup', (e) => {
-  dragging = false;
-  if (moved > 6) return;
+function endPointer(e: PointerEvent, tap: boolean): void {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.delete(e.pointerId);
+  if (pointers.size > 0) {
+    // back to a one-finger drag from where the other finger is
+    const [rest] = [...pointers.values()];
+    dragStartX = rest!;
+    dragCamX = cam.x;
+    return;
+  }
+  if (!tap || moved > 6) return;
   const rect = canvas.getBoundingClientRect();
   const plot = plotAtWorldX(state, screenToWorldX(cam, e.clientX - rect.left));
   if (plot === null) panel.close();
@@ -104,19 +151,26 @@ canvas.addEventListener('pointerup', (e) => {
     panel.open(plot);
     panel.update(state);
   }
-});
-canvas.addEventListener('pointercancel', () => (dragging = false));
-canvas.addEventListener('lostpointercapture', () => (dragging = false));
+}
+canvas.addEventListener('pointerup', (e) => endPointer(e, true));
+canvas.addEventListener('pointercancel', (e) => endPointer(e, false));
+canvas.addEventListener('lostpointercapture', (e) => endPointer(e, false));
 canvas.addEventListener('wheel', (e) => {
-  cam.x += (e.deltaX || e.deltaY) / cam.zoom;
-  clampCamera(cam, worldWidth(state));
   e.preventDefault();
+  const sx = e.clientX - canvas.getBoundingClientRect().left;
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+    cam.x += e.deltaX / cam.zoom;
+    clampCamera(cam, worldWidth(state));
+  } else {
+    zoomAt(sx, Math.exp(-e.deltaY * 0.0015));
+  }
 }, { passive: false });
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') panel.close();
 });
 
 // --- Loop ------------------------------------------------------------------
+const bootTime = performance.now();
 let lastUiUpdate = 0;
 function frame(): void {
   const now = Date.now();
@@ -130,7 +184,7 @@ function frame(): void {
     hud.update(state);
     panel.update(state);
   }
-  drawCity(ctx, state, cam, panel.selected);
+  drawCity(ctx, state, cam, panel.selected, dpr, (performance.now() - bootTime) / 1000);
   requestAnimationFrame(frame);
 }
 
@@ -141,10 +195,19 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', save);
 
+// --- Fonts: sprites are drawn with Baloo 2, so redraw once it is ready -------
+Promise.all(['600', '700', '800'].map((w) => document.fonts.load(`${w} 16px "Baloo 2"`)))
+  .then(() => {
+    clearSpriteCache();
+    clearSceneCache();
+  })
+  .catch(() => undefined);
+
 // --- Title card --------------------------------------------------------------
 const splash = document.createElement('div');
 splash.className = 'splash';
-splash.innerHTML = `<h1></h1><p class="disclaimer"></p><button type="button" class="splash-start">Start</button>`;
+splash.innerHTML = `<div class="splash-card"><p class="splash-kicker"></p><h1></h1><p class="disclaimer"></p><button type="button" class="splash-start"></button></div>`;
+splash.querySelector('.splash-kicker')!.textContent = STRINGS.tagline;
 splash.querySelector('h1')!.textContent = STRINGS.title;
 splash.querySelector('.disclaimer')!.textContent = STRINGS.disclaimer;
 splash.querySelector('button')!.textContent = STRINGS.start;

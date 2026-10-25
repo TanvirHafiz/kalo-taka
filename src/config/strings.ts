@@ -7,6 +7,7 @@ export const STRINGS = {
   title: 'Kalo Taka Private Limited',
   disclaimer: 'Any resemblance to any real bhai is purely coincidental.',
   start: 'Start',
+  tagline: 'From tin shed to sky tower. Paperwork optional.',
 
   hud: {
     taka: 'Taka',
@@ -44,6 +45,15 @@ export const STRINGS = {
     noPlotsLeft: 'No plots left in this district.',
   },
 
+  art: {
+    toLet: 'TO-LET',
+    forSale: 'JOMI BIKROY',
+    forSaleSub: 'for sale',
+    reserved: 'COMING SOON',
+    reservedSub: 'by the owner',
+    helipad: 'H',
+  },
+
   toasts: {
     welcomeBack: 'While you were away, the buildings collected {amount}.',
     built: '{name} built. Tenants already queueing.',
@@ -53,6 +63,20 @@ export const STRINGS = {
 } as const;
 
 export type ErrorKey = keyof typeof STRINGS.errors;
+
+/** Signboard name word lists: first word + second word. All invented. */
+export const NAME_WORDS = {
+  housing: {
+    first: ['Shanti', 'Rahman', 'Ma', 'Bhai Bhai', 'Golden', 'Royal', 'Nur', 'Moyna', 'Dulal', 'Kobutor', 'Shapla', 'Bismillah'],
+    second: ['Nibash', 'Villa', 'Tower', 'Bhaban', 'Heights', 'Kutir', 'Mansion', 'Palace', 'Garden'],
+  },
+} as const;
+
+/**
+ * Lowercased full names that must never be generated, in case a combination
+ * collides with a real, well-known brand or building. Extend as needed.
+ */
+export const NAME_BLOCKLIST: readonly string[] = ['royal tower', 'golden tower'];
 
 /** Fill {slots} in a template. */
 export function fmt(template: string, vars: Record<string, string | number>): string {

@@ -30,10 +30,3 @@ export const BUILDINGS: Record<Category, TierDef[]> = {
 /** Categories the player can build in this milestone. */
 export const BUILDABLE_CATEGORIES: readonly Category[] = ['housing'];
 
-/** Placeholder colours per tier until the procedural generator lands in M2. */
-export const PLACEHOLDER_COLORS: Record<Category, string[]> = {
-  housing: ['#b8c4c2', '#e8a598', '#f2df8a', '#9cc9e8', '#f4efe4', '#a9dcc0', '#c9b6e4'],
-  food: [],
-  healthcare: [],
-  retail: [],
-};

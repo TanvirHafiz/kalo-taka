@@ -1,5 +1,8 @@
 // Horizontal side-scrolling camera. World units are CSS pixels at zoom 1.
 
+export const ZOOM_MIN = 0.6;
+export const ZOOM_MAX = 1.5;
+
 export interface Camera {
   x: number;
   zoom: number;

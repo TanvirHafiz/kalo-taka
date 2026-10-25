@@ -25,7 +25,21 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 
 ## M2: Procedural city
 
-- [ ] Side-scrolling street with front row of 12 plots, sky, road, footpath
-- [ ] Full building generator for housing tiers 1 to 7 with offscreen-canvas caching
+Started early at your request ("make the properties look proper"). The first two boxes are done.
+
+- [x] Side-scrolling street with front row of 12 plots, sky, road, footpath
+- [x] Full building generator for housing tiers 1 to 7 with offscreen-canvas caching
 - [ ] Day/night cycle, rickshaws and pedestrians, traffic density tied to income
-- [ ] Merge animation and upgrade visual changes
+- [ ] Merge animation and upgrade visual changes (upgrade decor already grows with level; merge animation still to do)
+
+### Art notes
+
+- Flat fills, 2 px ink outlines, gradient only on the sky, one flat shadow ellipse per building.
+- Scene: sky, sun, drifting clouds, two parallax skyline layers (pre-rendered tiles), street trees, electric poles with tangled wires, tiled footpath, yellow and black curb, patched road.
+- Plots: for-sale plots have weeds, a bamboo fence and a "JOMI BIKROY" board with the price. Owned empty plots show bricks, sand and a "COMING SOON" board.
+- Housing T1 to T7: tin shed with clothesline and tube-well; semi-pucca with brick, tin roof and an optional cow; 2-floor dotola with rebar and a water tank; To-Let Bhaban (6 floors + 1 per 3 levels) with grills, balconies, ACs and a TO-LET banner; marble duplex with a gold gate and sleeping guards; Lake View Palace with domes and a fountain pond; glass Sky Tower with sky gardens, helipad and a neon name.
+- Seeds: building seed = hash(runSeed, plot, tier, fixed category index). Every floor and decor slot has its own seed, and each slot has a fixed level threshold, so upgrades only add detail.
+- Sprite cache: DPR capped at 2, two scale buckets, LRU capped at about 12M pixels. Script time is about 0.4 ms per frame.
+- Signboard names come from word lists in `strings.ts`, with a blocklist.
+- Font: Baloo 2, self-hosted via @fontsource (no Google dependency). Sprites redraw once it loads.
+- Zoom: wheel or pinch, 0.6x to 1.5x (as in the spec). Pan by dragging, or with Shift+wheel or a sideways trackpad swipe. On first load the zoom is fit to the screen.
