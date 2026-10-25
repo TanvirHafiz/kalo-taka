@@ -3,8 +3,9 @@ import type { Building, GameState } from '../src/state/types';
 
 export const T0 = 1_700_000_000_000;
 
+/** A fresh game with the tutorial already done (rules tests should not get Mamun's loans). */
 export function fresh(): GameState {
-  return createInitialState(42, T0);
+  return { ...createInitialState(42, T0), tutorial: { step: 7, done: true } };
 }
 
 /** State with given buildings placed on owned plots. */

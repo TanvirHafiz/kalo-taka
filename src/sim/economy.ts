@@ -1,4 +1,6 @@
 import { BALANCE, CORRUPTION, NEPHEWS, type NephewId } from '../config/balance';
+import { EVENT_TUNING, PRESTIGE } from '../config/events';
+import { dayPhase } from './daycycle';
 import { BUILDINGS, NEIGHBOUR_RULES, PATIENT_CAPACITY, type Category, type TierDef } from '../config/buildings';
 import type { Building, GameState } from '../state/types';
 import { neighbours, plotById } from './layout';
@@ -27,13 +29,34 @@ export function skimShare(state: GameState): number {
   return s;
 }
 
-/** Multipliers from stars, nephews and posters. All 1 until later milestones. */
-export function globalMult(_state: GameState): number {
-  return 1;
+/** Offshore Stars: +10% income each, forever. */
+export function globalMult(state: GameState): number {
+  return 1 + PRESTIGE.incomePerStar * state.stars;
 }
 
-export function eventMult(_state: GameState, _b: Building): number {
-  return 1;
+/**
+ * Effects of the running event, the rent hike and flyover frontage on one plot. Kept out of
+ * baseIncome(), so events never change prices or unlock districts.
+ */
+export function eventMult(state: GameState, id: number, b: Building): number {
+  let m = 1;
+  const now = state.lastSimTime;
+  const e = state.event && state.event.until > now ? state.event : null;
+  if (e) {
+    const T = EVENT_TUNING;
+    if (e.id === 'loadShedding' && e.dark?.includes(id) && !state.generators.includes(id)) m *= T.loadSheddingMult;
+    if (e.id === 'monsoon' && b.category === 'housing') m *= T.monsoonHousingMult;
+    if (e.id === 'hartal' && (b.category === 'food' || b.category === 'retail')) m *= T.hartalMult;
+    if (e.id === 'dengue' && b.category === 'healthcare') m *= T.dengueMult;
+    if (e.id === 'vip') m *= T.vipMult;
+    if (e.id === 'ramadan' && b.category === 'food') {
+      const phase = dayPhase(now);
+      if (phase >= T.ramadanEveningFrom && phase <= T.ramadanEveningTo) m *= T.ramadanFoodMult;
+    }
+  }
+  if (b.category === 'housing' && state.rentHikeUntil > now) m *= EVENT_TUNING.rentHikeMult;
+  if (state.frontage.includes(id)) m *= 1 + EVENT_TUNING.frontageBonus;
+  return m;
 }
 
 /** income = baseIncome * (1 + 0.25(level - 1)) * occupancy * globalMult * eventMult, per second. */
@@ -41,7 +64,7 @@ export function buildingIncome(state: GameState, b: Building): number {
   const def = tierDef(b.category, b.tier);
   if (!def) return 0;
   const levelMult = 1 + BALANCE.incomePerLevel * (b.level - 1);
-  return def.baseIncome * levelMult * occupancy(state, b) * globalMult(state) * eventMult(state, b);
+  return def.baseIncome * levelMult * occupancy(state, b) * globalMult(state);
 }
 
 /** Sum of neighbour bonuses for the building on a plot (0.2 = +20%). Each neighbour counts. */
@@ -68,22 +91,29 @@ export function isBoosted(state: GameState): boolean {
   return state.lastSimTime < state.boostUntil;
 }
 
-/** Income per second of the building on a plot: neighbours, back row and (optionally) the boost. */
-export function plotIncome(state: GameState, id: number, boosted = isBoosted(state)): number {
+/** Income per second of the building on a plot: neighbours, back row, events and the boost. */
+export function plotIncome(state: GameState, id: number, boosted = isBoosted(state), events = true): number {
   const p = plotById(state, id);
   if (!p?.building) return 0;
   // frozen by an inquiry: earns nothing until it ends
   if (state.inquiry?.plot === id) return 0;
   const row = p.row === 'back' ? BALANCE.backRowIncome : 1;
   const boost = boosted ? BALANCE.briefcaseMult : 1;
-  return buildingIncome(state, p.building) * Math.max(0, 1 + neighbourBonus(state, id)) * row * boost * (1 - skimShare(state));
+  const ev = events ? eventMult(state, id, p.building) : 1;
+  const toronto = state.destination === 'toronto' && p.building.category === 'housing' ? 1 + PRESTIGE.torontoHousing : 1;
+  return buildingIncome(state, p.building) * Math.max(0, 1 + neighbourBonus(state, id)) * row * boost * ev * toronto * (1 - skimShare(state));
 }
 
-/** Total income per second. Pass `boosted = false` for the underlying rate (unlock thresholds). */
-export function totalIncome(state: GameState, boosted = isBoosted(state)): number {
+/** Total income per second, including events (and the boost unless `boosted` is false). */
+export function totalIncome(state: GameState, boosted = isBoosted(state), events = true): number {
   let sum = 0;
-  for (const p of state.plots) if (p.building) sum += plotIncome(state, p.index, boosted);
+  for (const p of state.plots) if (p.building) sum += plotIncome(state, p.index, boosted, events);
   return sum;
+}
+
+/** The underlying rate: no briefcase boost, no event effects. Used for prices and unlocks. */
+export function baseIncome(state: GameState): number {
+  return totalIncome(state, false, false);
 }
 
 /** Patients shown on a healthcare building: occupancy x tier capacity. */

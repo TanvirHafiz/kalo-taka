@@ -2,7 +2,10 @@ import { BALANCE } from '../config/balance';
 import type { GameState } from '../state/types';
 import { totalIncome } from './economy';
 import { completeDueJobs, maybeEndInquiry, maybeStartInquiry, nextDeadline, ronyCollects, updateHeat, updateMilestones } from './corruption';
+import { eventFlow, maybeEndEvent, maybeStartEvent } from './events';
+import { districtCount } from './layout';
 import { growWorld, updatePickups, updateUnlocks } from './progress';
+import { advanceTutorial } from './tutorial';
 
 export interface AdvanceResult {
   state: GameState;
@@ -38,10 +41,10 @@ export function advance(state: GameState, now: number): AdvanceResult {
  * it was, then heat, then finish due permits, then inquiries, unlocks, world growth and pickups.
  * The briefcase boost only applies to the part of the step before it runs out.
  */
-export function tick(state: GameState, dtSec: number, now: number, catchingUp = false): GameState {
+export function tick(state: GameState, dtSec: number, now: number, catchingUp = false, incomeScale = 1): GameState {
   const base = totalIncome(state, false);
   const boostedSec = Math.min(dtSec, Math.max(0, Math.min(now, state.boostUntil) - state.lastSimTime) / 1000);
-  const earned = base * dtSec + base * (BALANCE.briefcaseMult - 1) * boostedSec;
+  const earned = (base * dtSec + base * (BALANCE.briefcaseMult - 1) * boostedSec) * incomeScale;
   let s: GameState = {
     ...state,
     taka: state.taka + earned,
@@ -50,13 +53,23 @@ export function tick(state: GameState, dtSec: number, now: number, catchingUp = 
     posters: state.posters.some((t) => t <= now) ? state.posters.filter((t) => t > now) : state.posters,
   };
   s = updateHeat(s, dtSec);
+  s = eventFlow(s, dtSec, incomeScale).state;
   s = completeDueJobs(s, now);
   s = maybeEndInquiry(s, now);
   s = maybeStartInquiry(s, now);
+  s = maybeEndEvent(s, now);
+  if (!catchingUp) {
+    // the event clock and the tutorial only move while the player is actually playing
+    s = { ...s, runPlayMs: s.runPlayMs + dtSec * 1000 };
+    s = maybeStartEvent(s, now);
+    s = advanceTutorial(s);
+    if (base > s.stats.bestIncome) s = { ...s, stats: { ...s.stats, bestIncome: base } };
+  }
   s = updateUnlocks(s);
   s = growWorld(s);
+  if (districtCount(s) > s.districtsSeen) s = { ...s, districtsSeen: districtCount(s) };
   s = updatePickups(s, now, catchingUp);
-  s = ronyCollects(s, now);
+  s = ronyCollects(s, now, incomeScale);
   return updateMilestones(s);
 }
 

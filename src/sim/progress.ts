@@ -1,12 +1,13 @@
 // World growth and timed pickups: category unlocks, districts, the back row, cash bags and the
 // golden briefcase. Pure functions over state; randomness comes from state.rng.
 import { BALANCE } from '../config/balance';
-import { CATEGORIES, DISTRICTS, UNLOCK_HOUSING_TIER } from '../config/buildings';
+import { CATEGORIES, DISTRICTS } from '../config/buildings';
 import { districtRow } from '../state/initialState';
 import type { BagKind, GameState } from '../state/types';
 import { rngStep } from '../util/rng';
-import { plotsOwned, totalIncome } from './economy';
+import { baseIncome, plotsOwned } from './economy';
 import { districtCount, hasBackRow } from './layout';
+import { unlockTier } from './prestige';
 
 const BAG_KINDS: readonly BagKind[] = ['bhara', 'chanda', 'commission'];
 
@@ -20,7 +21,7 @@ function between(rng: number, a: number, b: number): [number, number] {
 export function updateUnlocks(state: GameState): GameState {
   let top = 0;
   for (const p of state.plots) if (p.building?.category === 'housing') top = Math.max(top, p.building.tier);
-  const add = CATEGORIES.filter((c) => !state.unlocked.includes(c) && UNLOCK_HOUSING_TIER[c] <= top);
+  const add = CATEGORIES.filter((c) => !state.unlocked.includes(c) && unlockTier(state, c) <= top);
   return add.length ? { ...state, unlocked: [...state.unlocked, ...add] } : state;
 }
 
@@ -30,7 +31,7 @@ export function updateUnlocks(state: GameState): GameState {
  */
 export function growWorld(state: GameState): GameState {
   let s = state;
-  const base = totalIncome(s, false);
+  const base = baseIncome(s);
   let n = districtCount(s);
   while (n < DISTRICTS.length && base >= DISTRICTS[n]!.unlockIncome) {
     let plots = [...s.plots, ...districtRow(s.plots, n, 'front')];

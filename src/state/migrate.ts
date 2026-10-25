@@ -1,6 +1,6 @@
 import { BALANCE, MONEY_SCALE } from '../config/balance';
 import { BUILDINGS, CATEGORIES, UNLOCK_HOUSING_TIER, type Category } from '../config/buildings';
-import { SAVE_VERSION, noNephews } from './initialState';
+import { SAVE_VERSION, m5Defaults, noNephews } from './initialState';
 import type { GameState } from './types';
 
 type Raw = Record<string, unknown>;
@@ -72,6 +72,13 @@ const MIGRATIONS: Record<number, (data: Raw) => Raw> = {
       startedAt: typeof d.lastSimTime === 'number' ? d.lastSimTime : 0,
     };
   },
+  // v4 -> v5 (M5): events, tutorial and prestige bookkeeping. A save with any progress skips the tutorial.
+  4: (d) => {
+    const plots = Array.isArray(d.plots) ? (d.plots as Raw[]) : [];
+    const progressed = plots.some((p) => p.building) || plots.filter((p) => p.owned).length > 1;
+    const districts = plots.reduce((m, p) => Math.max(m, typeof p.district === 'number' ? p.district + 1 : 1), 1);
+    return { ...d, ...m5Defaults(), tutorial: { step: 0, done: progressed }, districtsSeen: districts };
+  },
 };
 
 const finite = (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v);
@@ -130,6 +137,10 @@ function isGameState(x: unknown): x is GameState {
     typeof s.milestones === 'object' && s.milestones !== null &&
     (s.inquiry === null || (typeof s.inquiry === 'object' && Number.isInteger((s.inquiry as Raw).plot) && finite((s.inquiry as Raw).until))) &&
     typeof s.bachelorsAllowed === 'boolean' && finite(s.speedPaid) && Array.isArray(s.events) &&
+    finite(s.runPlayMs) && finite(s.nextEventPlayMs) && finite(s.rentHikeUntil) && finite(s.districtsSeen) &&
+    Array.isArray(s.lastEvents) && Array.isArray(s.doneThisRun) && Array.isArray(s.generators) && Array.isArray(s.frontage) &&
+    (s.event === null || (typeof s.event === 'object' && typeof (s.event as Raw).id === 'string' && finite((s.event as Raw).until))) &&
+    typeof s.tutorial === 'object' && s.tutorial !== null && typeof s.stats === 'object' && s.stats !== null &&
     (s.bag === null || (typeof s.bag === 'object' && Number.isInteger((s.bag as Raw).plot) && ['bhara', 'chanda', 'commission'].includes((s.bag as Raw).kind as string)))
   );
 }

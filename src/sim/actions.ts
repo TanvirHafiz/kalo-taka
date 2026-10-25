@@ -3,16 +3,21 @@ import type { Category } from '../config/buildings';
 import type { ErrorKey } from '../config/strings';
 import type { Action, ActionResult, Building, GameState, Plot, UpgradeCount } from '../state/types';
 import {
-  addHeat, completeJob, endInquiry, inquiryCost, journalistCost, isFrozen, newJob, nephewHireCost, nephewTrainCost, nephewUnlocked,
+  addHeat, addInfluence, completeJob, endInquiry, inquiryCost, journalistCost, isFrozen, newJob, nephewHireCost, nephewTrainCost, nephewUnlocked,
   permitSeconds, posterCost, rollLeak, speedMoneyCost, waterPumpCost,
 } from './corruption';
 import { buildCost, plotCost, plotIncome, upgradeCost } from './economy';
 import { leftOf, plotById } from './layout';
 import { mergeBlocker, mergeFee } from './merge';
+import { applyChoice, canChoose } from './events';
+import { canFlee, flee } from './prestige';
 import { growWorld, scheduleBag, updateUnlocks } from './progress';
+import { endTutorial } from './tutorial';
 
 // Validators are shared by applyAction and the UI so disabled buttons always agree with the reducer.
 // Actions use the sim's own clock (state.lastSimTime), never the wall clock.
+
+const sideBizOn = (state: GameState, plot: number) => state.sideBiz?.plot === plot;
 
 export function canBuyPlot(state: GameState, plot: number): ErrorKey | null {
   const p = plotById(state, plot);
@@ -34,6 +39,7 @@ export function canBuild(state: GameState, plot: number, category: Category): Er
   if (!p) return 'noSuchPlot';
   if (!p.owned) return 'plotNotOwned';
   if (p.job) return 'permitPending';
+  if (sideBizOn(state, plot)) return 'sideBizHere';
   if (p.building) return 'plotOccupied';
   if (!state.unlocked.includes(category)) return 'notBuildable';
   if (state.taka < buildCost(category)) return 'notEnoughTaka';
@@ -170,7 +176,7 @@ export function applyAction(state: GameState, action: Action): ActionResult {
         const inq = s.inquiry!;
         s = { ...s, inquiry: { ...inq, until: now + Math.max(0, inq.until - now) / 2, talked: true } };
       } else if (action.option === 'donation') {
-        s = endInquiry({ ...s, influence: Math.min(CORRUPTION.influenceMax, s.influence + CORRUPTION.donationInfluence) });
+        s = endInquiry(addInfluence(s, CORRUPTION.donationInfluence));
       } else {
         s = endInquiry(s);
         const [leaked, next] = rollLeak(s);
@@ -224,6 +230,18 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       if (state.bachelorsAllowed) return { state, error: 'alreadyDone' };
       return { state: { ...state, bachelorsAllowed: true, heat: { ...state.heat, anger: Math.max(0, state.heat.anger - CORRUPTION.bachelorsAnger) } } };
     }
+    case 'eventChoice': {
+      const error = canChoose(state, action.choice, action.plot);
+      if (error) return { state, error };
+      return { state: applyChoice(state, action.choice, action.plot) };
+    }
+    case 'flee': {
+      const error = canFlee(state, action.destination);
+      if (error) return { state, error };
+      return { state: flee(state, action.destination, now) };
+    }
+    case 'skipTutorial':
+      return { state: endTutorial(state) };
     case 'collectBag': {
       if (!state.bag) return { state, error: 'nothingToCollect' };
       const got = plotIncome(state, state.bag.plot) * BALANCE.bagSeconds;

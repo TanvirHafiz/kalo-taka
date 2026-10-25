@@ -4,7 +4,7 @@ import { BALANCE } from '../config/balance';
 import { DISTRICTS } from '../config/buildings';
 import { STRINGS, fmt } from '../config/strings';
 import { dayPhase } from '../sim/daycycle';
-import { neighbourBonus, patients, plotCost, totalIncome } from '../sim/economy';
+import { baseIncome, neighbourBonus, patients, plotCost } from '../sim/economy';
 import { districtCount, plotById } from '../sim/layout';
 import { CORRUPTION } from '../config/balance';
 import type { GameState, Job, Plot } from '../state/types';
@@ -282,7 +282,7 @@ export class CityRenderer {
     const built = state.plots.filter((p) => p.building);
     const doors = built.filter((p) => p.row === 'front').map(plotCenter);
 
-    this.traffic.update(dt, timeSec, ww, totalIncome(state, false), built.some((p) => p.building!.tier >= 5));
+    this.traffic.update(dt, timeSec, ww, baseIncome(state), built.some((p) => p.building!.tier >= 5));
     this.people.update(dt, ww, FOOTPATH_H, doors, built.length);
     this.effects.update(nowMs);
 

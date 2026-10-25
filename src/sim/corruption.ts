@@ -3,7 +3,8 @@
 import { BALANCE, CORRUPTION, NEPHEWS, NEPHEW_MAX_LEVEL, RONY_AT_BUILDINGS, type NephewId } from '../config/balance';
 import type { Building, GameState, Job, Plot, SimEvent } from '../state/types';
 import { rngStep } from '../util/rng';
-import { plotIncome, skimShare, totalIncome } from './economy';
+import { baseIncome, plotIncome, skimShare } from './economy';
+import { EVENT_TUNING, PRESTIGE } from '../config/events';
 import { plotById } from './layout';
 import { scheduleBag } from './progress';
 
@@ -20,9 +21,16 @@ export function effectiveInfluence(state: GameState, now = state.lastSimTime): n
   return Math.min(CORRUPTION.influenceMax, state.influence + CORRUPTION.posterInfluence * activeCampaigns(state, now));
 }
 
-/** Influence cuts heat gain by up to 30%. */
+/** Influence cuts heat gain by up to 30%; the Undisclosed Island cuts another 25%. */
 export function heatGainMult(state: GameState): number {
-  return 1 - CORRUPTION.influenceHeatCut * (effectiveInfluence(state) / CORRUPTION.influenceMax);
+  const island = state.destination === 'island' ? 1 - PRESTIGE.islandHeatCut : 1;
+  return (1 - CORRUPTION.influenceHeatCut * (effectiveInfluence(state) / CORRUPTION.influenceMax)) * island;
+}
+
+/** Add donation/event Influence; doubled during election season. */
+export function addInfluence(state: GameState, amount: number): GameState {
+  const election = state.event?.id === 'election' && state.event.until > state.lastSimTime ? EVENT_TUNING.electionInfluenceMult : 1;
+  return { ...state, influence: Math.min(CORRUPTION.influenceMax, state.influence + amount * election) };
 }
 
 /** Influence gives up to 50% off speed money and bribes. */
@@ -56,7 +64,7 @@ export function nephewUnlocked(state: GameState, id: NephewId): boolean {
 
 /** Cost of `seconds` of the player's real income (unboosted, after the nephews' cut). */
 export function incomeSeconds(state: GameState, seconds: number): number {
-  return Math.ceil(totalIncome(state, false) * seconds);
+  return Math.ceil(baseIncome(state) * seconds);
 }
 
 export function nephewHireCost(state: GameState): number {
@@ -70,7 +78,8 @@ export function nephewTrainCost(state: GameState, id: NephewId): number {
 }
 
 export function posterCost(state: GameState): number {
-  return Math.max(CORRUPTION.minPrice, incomeSeconds(state, CORRUPTION.posterSeconds));
+  const election = state.event?.id === 'election' && state.event.until > state.lastSimTime ? EVENT_TUNING.electionPosterPrice : 1;
+  return Math.max(CORRUPTION.minPrice, Math.ceil(incomeSeconds(state, CORRUPTION.posterSeconds) * election));
 }
 
 /** Cost of an inquiry option (bribes get the Influence discount). */
@@ -87,14 +96,17 @@ export function journalistCost(state: GameState): number {
 /** Housing income for the water pump fix. */
 export function waterPumpCost(state: GameState): number {
   let housing = 0;
-  for (const p of state.plots) if (p.building?.category === 'housing') housing += plotIncome(state, p.index, false);
+  for (const p of state.plots) if (p.building?.category === 'housing') housing += plotIncome(state, p.index, false, false);
   return Math.max(CORRUPTION.minPrice, Math.ceil(housing * CORRUPTION.waterPumpSeconds));
 }
 
 /** Permit wait in seconds for a job, after Permit Bhai Polash's cut. */
 export function permitSeconds(state: GameState, kind: 'build' | 'upgrade' | 'merge', tier: number, levels = 1): number {
+  // during the tutorial, Mamun "knows the officer": permits clear almost at once
+  if (!state.tutorial.done) return 1;
   const base = kind === 'build' ? CORRUPTION.permitBuild : kind === 'upgrade' ? CORRUPTION.permitUpgradePerTier * tier * levels : CORRUPTION.permitMergePerTier * tier;
-  return base * (1 - nephewEffect(state, 'polash'));
+  const kl = state.destination === 'kl' ? 1 - PRESTIGE.klPermitCut : 1;
+  return base * (1 - nephewEffect(state, 'polash')) * kl;
 }
 
 /** speedMoney = remaining s x income/s x 0.5 x (1 - influence / 200), with a floor. */
@@ -102,7 +114,8 @@ export function speedMoneyCost(state: GameState, plot: number): number {
   const job = plotById(state, plot)?.job;
   if (!job || job.kind === 'fill') return Infinity;
   const remaining = Math.max(0, (job.until - state.lastSimTime) / 1000);
-  const price = remaining * totalIncome(state, false) * CORRUPTION.speedMoneyFactor * (1 - effectiveInfluence(state) / CORRUPTION.influenceDiscountDiv);
+  const dubai = state.destination === 'dubai' ? 1 - PRESTIGE.dubaiSpeedCut : 1;
+  const price = remaining * baseIncome(state) * CORRUPTION.speedMoneyFactor * (1 - effectiveInfluence(state) / CORRUPTION.influenceDiscountDiv) * dubai;
   return Math.max(CORRUPTION.minPrice, Math.ceil(price));
 }
 
@@ -119,7 +132,8 @@ export function updateHeat(state: GameState, dt: number): GameState {
   const h = state.heat;
   const big = state.plots.filter((p) => p.building?.category === 'housing' && p.building.tier >= CORRUPTION.angerTier).length;
   const k = heatGainMult(state);
-  const mediaDecay = CORRUPTION.mediaDecay * (1 + activeCampaigns(state)) * (1 + nephewEffect(state, 'mithu'));
+  const london = state.destination === 'london' ? 1 + PRESTIGE.londonMediaDecay : 1;
+  const mediaDecay = CORRUPTION.mediaDecay * (1 + activeCampaigns(state)) * (1 + nephewEffect(state, 'mithu')) * london;
   const media = clampHeat(h.media - mediaDecay * dt);
   const anger = clampHeat(h.anger + (CORRUPTION.angerPerBigHousing * big * k - CORRUPTION.angerDecay) * dt);
   const fromMedia = h.media > CORRUPTION.mediaAlarm ? CORRUPTION.committeeFromMedia * k : 0;
@@ -145,7 +159,7 @@ export function maybeStartInquiry(state: GameState, now: number): GameState {
   for (const p of pool) if (plotIncome(state, p.index, false) > plotIncome(state, target.index, false)) target = p;
   let s: GameState = {
     ...state,
-    inquiry: { plot: target.index, until: now + CORRUPTION.inquiryFreeze * 1000, talked: false },
+    inquiry: { plot: target.index, until: now + (state.stars >= PRESTIGE.perkShortInquiryAt ? PRESTIGE.perkInquirySeconds : CORRUPTION.inquiryFreeze) * 1000, talked: false },
     milestones: { ...state.milestones, firstInquiry: true },
     heat: { ...state.heat, committee: CORRUPTION.heatMax - 0.01 },
   };
@@ -225,9 +239,9 @@ export function updateMilestones(state: GameState): GameState {
 }
 
 /** Rony collects a waiting bag at his share of its value. */
-export function ronyCollects(state: GameState, now: number): GameState {
+export function ronyCollects(state: GameState, now: number, incomeScale = 1): GameState {
   if (!state.bag || !state.nephews.rony.hired) return state;
-  const pay = plotIncome(state, state.bag.plot) * BALANCE.bagSeconds * nephewEffect(state, 'rony');
+  const pay = plotIncome(state, state.bag.plot) * BALANCE.bagSeconds * nephewEffect(state, 'rony') * incomeScale;
   const s = { ...state, bag: null, taka: state.taka + pay, lifetimeEarnings: state.lifetimeEarnings + pay };
   return withEvent(scheduleBag(s, now), { kind: 'bagAuto', amount: pay });
 }
@@ -242,6 +256,8 @@ export function nextDeadline(state: GameState, t: number): number {
   if (state.inquiry) consider(state.inquiry.until);
   for (const e of state.posters) consider(e);
   consider(state.boostUntil);
+  if (state.event) consider(state.event.until);
+  consider(state.rentHikeUntil);
   return next;
 }
 

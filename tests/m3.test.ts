@@ -17,7 +17,7 @@ import { T0, act } from './helpers';
 const b = (category: Building['category'], tier: number, level = 1): Building => ({ category, tier, level });
 
 function world(districts = 1, back = false): GameState {
-  let s = createInitialState(7, T0);
+  let s = { ...createInitialState(7, T0), tutorial: { step: 7, done: true } };
   for (let d = 1; d < districts; d++) s = { ...s, plots: [...s.plots, ...districtRow(s.plots, d, 'front')] };
   if (back) for (let d = 0; d < districts; d++) s = { ...s, plots: [...s.plots, ...districtRow(s.plots, d, 'back')] };
   return { ...s, taka: 1e15, unlocked: ['housing', 'food', 'healthcare', 'retail'] };
@@ -114,7 +114,7 @@ describe('world growth', () => {
   });
 
   it('food unlocks when a tier 3 house is merged', () => {
-    let s = createInitialState(7, T0);
+    let s = { ...createInitialState(7, T0), tutorial: { step: 7, done: true } };
     s = { ...s, taka: 1e12 };
     s = place(s, [[0, 'front', 0, b('housing', 2, 10)], [0, 'front', 1, b('housing', 2, 10)]]);
     expect(act(s, { type: 'build', plot: id(s, 0, 'front', 2), category: 'food' }).error).toBe('plotNotOwned');
@@ -204,7 +204,7 @@ describe('save v1 -> v2', () => {
     };
     const s = migrate(v1)!;
     expect(s).not.toBeNull();
-    expect(s.version).toBe(4);
+    expect(s.version).toBe(5);
     expect(s.plots[3]).toMatchObject({ district: 0, slot: 3, row: 'front' });
     expect(s.unlocked).toEqual(['housing', 'food', 'healthcare', 'retail']);
     expect(s.bag).toBeNull();

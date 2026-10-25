@@ -1,5 +1,6 @@
 import type { NephewId } from '../config/balance';
 import type { Category } from '../config/buildings';
+import type { DestinationId, EventId } from '../config/events';
 import type { ErrorKey } from '../config/strings';
 
 export interface Building {
@@ -84,6 +85,40 @@ export interface GameState {
   speedPaid: number;
   /** Things that happened inside the sim for the UI to show (drained by main each frame). */
   events: SimEvent[];
+
+  /** Visible play time this run (ms); drives the event clock and once-per-run events. */
+  runPlayMs: number;
+  /** The one running random event. */
+  event: ActiveEvent | null;
+  nextEventPlayMs: number;
+  lastEvents: EventId[];
+  doneThisRun: EventId[];
+  /** Plots with a generator (immune to load-shedding, earn Diesel Supply). */
+  generators: number[];
+  /** January rent hike accepted: housing +20% until this time. */
+  rentHikeUntil: number;
+  /** Plots facing a new flyover: +15% income for the rest of the run. */
+  frontage: number[];
+  /** A temporary side business on an empty plot during an event. */
+  sideBiz: { plot: number; kind: 'parking' | 'cylinder' } | null;
+  tutorial: { step: number; done: boolean; since?: number };
+  /** Next-run perk chosen when fleeing. */
+  destination: DestinationId | null;
+  stats: { runs: number; bestIncome: number };
+  /** Highest number of districts ever opened (kept for the codex). */
+  districtsSeen: number;
+}
+
+export interface ActiveEvent {
+  id: EventId;
+  start: number;
+  until: number;
+  /** Load-shedding: plots that went dark. */
+  dark?: number[];
+  /** Monsoon: boats tapped so far. */
+  boats?: number;
+  /** A response already taken (one per event). */
+  choice?: string;
 }
 
 export type SimEvent =
@@ -94,7 +129,13 @@ export type SimEvent =
   | { kind: 'inquiry'; plot: number }
   | { kind: 'inquiryOver' }
   | { kind: 'leak' }
-  | { kind: 'bagAuto'; amount: number };
+  | { kind: 'bagAuto'; amount: number }
+  | { kind: 'eventStart'; id: EventId }
+  | { kind: 'eventEnd'; id: EventId }
+  | { kind: 'offline'; earned: number; gross: number }
+  | { kind: 'tutorial'; step: number }
+  | { kind: 'loan'; amount: number }
+  | { kind: 'fled'; stars: number };
 
 export type UpgradeCount = 1 | 10 | 'max';
 
@@ -114,7 +155,10 @@ export type Action =
   | { type: 'trainNephew'; id: NephewId }
   | { type: 'fire'; id: NephewId }
   | { type: 'waterPump' }
-  | { type: 'bachelors' };
+  | { type: 'bachelors' }
+  | { type: 'eventChoice'; choice: string; plot?: number }
+  | { type: 'flee'; destination: DestinationId }
+  | { type: 'skipTutorial' };
 
 export interface ActionResult {
   state: GameState;

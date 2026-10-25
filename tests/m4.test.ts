@@ -15,7 +15,7 @@ import { T0 } from './helpers';
 const H = (tier: number, level = 1): Building => ({ category: 'housing', tier, level });
 
 function city(buildings: Record<number, Building>, taka = 1e12): GameState {
-  const s = createInitialState(3, T0);
+  const s = { ...createInitialState(3, T0), tutorial: { step: 7, done: true } };
   return {
     ...s,
     taka,
@@ -259,7 +259,7 @@ describe('save v2 -> v3', () => {
       heat: { media: 0, anger: 0, committee: 0 }, influence: 0, stars: 0,
     };
     const s = migrate(v2)!;
-    expect(s.version).toBe(4);
+    expect(s.version).toBe(5);
     expect(s.plots[0]!.job).toBeNull();
     expect(s.milestones).toEqual({ firstMerge: true, firstInquiry: false, firstTier5: true, maxBuildings: 2 });
     expect(s.nephews.rony).toEqual({ hired: false, level: 0 });
@@ -288,7 +288,7 @@ describe('save v3 -> v4 (money x100)', () => {
     delete v3.startedAt;
     const s = migrate(v3)!;
     expect(s).not.toBeNull();
-    expect(s.version).toBe(4);
+    expect(s.version).toBe(5);
     expect(s.taka).toBe(123_400);
     expect(s.lifetimeEarnings).toBe(99_900);
     expect(s.bag?.kind).toBe('chanda');
