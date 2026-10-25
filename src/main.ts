@@ -5,8 +5,8 @@ import './style.css';
 import { BALANCE } from './config/balance';
 import { STRINGS, errorText, fmt } from './config/strings';
 import { clearSpriteCache } from './render/buildings/cache';
-import { ZOOM_MAX, ZOOM_MIN, createCamera, clampCamera, screenToWorldX } from './render/camera';
-import { CityRenderer, fitZoom, plotCenter, worldWidth } from './render/city';
+import { ZOOM_MAX, ZOOM_MIN, createCamera, clampCamera, clampCameraY, screenToWorldX } from './render/camera';
+import { CityRenderer, fitZoom, maxPanY, plotCenter, worldWidth } from './render/city';
 import { clearSceneCache } from './render/scene';
 import { DISTRICTS } from './config/buildings';
 import { applyAction, bagValue } from './sim/actions';
@@ -145,12 +145,15 @@ function zoomAt(sx: number, factor: number): void {
   cam.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, cam.zoom * factor));
   cam.x = wx - sx / cam.zoom;
   clampCamera(cam, worldWidth(state));
+  clampCameraY(cam, maxPanY(state, cam, dpr));
 }
 
 // --- Input: drag to scroll, tap to select, wheel or pinch to zoom ----------
 const pointers = new Map<number, number>();
 let dragStartX = 0;
+let dragStartY = 0;
 let dragCamX = 0;
+let dragCamY = 0;
 let moved = 0;
 let pinchDist = 0;
 canvas.addEventListener('pointerdown', (e) => {
@@ -159,7 +162,9 @@ canvas.addEventListener('pointerdown', (e) => {
   if (pointers.size === 1) {
     moved = 0;
     dragStartX = e.clientX;
+    dragStartY = e.clientY;
     dragCamX = cam.x;
+    dragCamY = cam.y;
   } else if (pointers.size === 2) {
     const [a, b] = [...pointers.values()];
     pinchDist = Math.abs(a! - b!);
@@ -177,9 +182,13 @@ canvas.addEventListener('pointermove', (e) => {
     return;
   }
   const dx = e.clientX - dragStartX;
-  moved = Math.max(moved, Math.abs(dx));
+  const dy = e.clientY - dragStartY;
+  moved = Math.max(moved, Math.abs(dx), Math.abs(dy));
   cam.x = dragCamX - dx / cam.zoom;
   clampCamera(cam, worldWidth(state));
+  // dragging down looks up at taller buildings (only when there is something taller to see)
+  cam.y = dragCamY + dy;
+  clampCameraY(cam, maxPanY(state, cam, dpr));
 });
 function endPointer(e: PointerEvent, tap: boolean): void {
   if (!pointers.has(e.pointerId)) return;
@@ -189,6 +198,7 @@ function endPointer(e: PointerEvent, tap: boolean): void {
     const [rest] = [...pointers.values()];
     dragStartX = rest!;
     dragCamX = cam.x;
+    dragCamY = cam.y;
     return;
   }
   if (!tap || moved > 6) return;

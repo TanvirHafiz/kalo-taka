@@ -57,13 +57,30 @@ export function districtAtX(state: GameState, wx: number): number {
   return 0;
 }
 
-/** Zoom that fits the tallest building comfortably on first load. */
+/** Portrait screens zoom in so the street, not the sky, fills most of the height. */
+const PORTRAIT_FILL = 0.66;
+const PORTRAIT_REF_HEIGHT = 340;
+
+/**
+ * Starting zoom. Landscape fits the tallest building; portrait fills about 2/3 of the height with
+ * the street (a mid-size building reaches the top of that band) and the player pans up for towers.
+ */
 export function fitZoom(viewW: number, viewH: number): number {
-  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.min(viewH / 620, viewW / 330)));
+  const z = viewH > viewW * 1.2 ? (viewH * PORTRAIT_FILL) / PORTRAIT_REF_HEIGHT : Math.min(viewH / 620, viewW / 330);
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 }
 
 function groundScreenY(cam: Camera): number {
-  return Math.round(cam.viewH * GROUND_FRAC);
+  return Math.round(cam.viewH * GROUND_FRAC + cam.y);
+}
+
+/** How far up the camera may pan: enough to see the top of the tallest building under the HUD. */
+export function maxPanY(state: GameState, cam: Camera, dpr: number): number {
+  const scale = spriteScale(dpr, cam.zoom);
+  let tallest = 0;
+  for (const p of state.plots) if (p.building) tallest = Math.max(tallest, getSprite(state.seed, p.index, p.building, scale).height);
+  const headroom = cam.viewH * GROUND_FRAC - 130;
+  return Math.max(0, (tallest + 40) * cam.zoom - headroom);
 }
 
 /** Apply the back-row transform (smaller, higher) around a plot centre. */

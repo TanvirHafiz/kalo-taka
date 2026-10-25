@@ -77,4 +77,4 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 - Sprite cache: DPR capped at 2, two scale buckets, LRU capped at about 12M pixels.
 - Signboard names come from word lists in `strings.ts`, with a blocklist.
 - Font: Baloo 2, self-hosted via @fontsource (no Google dependency). Sprites redraw once it loads.
-- Zoom: wheel or pinch, 0.6x to 1.5x (as in the spec). Pan by dragging, or with Shift+wheel or a sideways trackpad swipe. On first load the zoom is fit to the screen.
+- Zoom: wheel or pinch, 0.6x to 1.5x (as in the spec). Pan by dragging, or with Shift+wheel or a sideways trackpad swipe. On first load the zoom is fit to the screen; on portrait phones it zooms in so the street fills about 2/3 of the height, and dragging down pans up to see the tops of tall towers.
