@@ -3,8 +3,10 @@ import { CORRUPTION, NEPHEWS, NEPHEW_MAX_LEVEL } from '../../config/balance';
 import { DESTINATIONS, PRESTIGE } from '../../config/events';
 import { FLEE, STRINGS, fmt } from '../../config/strings';
 import { canFlee, destinationUnlocked, starOffer } from '../../sim/prestige';
-import { NEPHEW_IDS, activeCampaigns, journalistCost, nephewEffect, nephewHireCost, nephewSkim, nephewTrainCost, nephewUnlocked, posterCost, totalSkim } from '../../sim/corruption';
+import { NEPHEW_IDS, activeCampaigns, journalistCost, ledgerOf, nephewEffect, nephewHireCost, nephewSkim, nephewTrainCost, nephewUnlocked, posterCost, totalSkim } from '../../sim/corruption';
+import { totalIncome } from '../../sim/economy';
 import type { GameState } from '../../state/types';
+import { formatRate, formatTaka } from '../../util/money';
 import type { SheetRow, SheetView } from './sheet';
 
 const pct = (v: number) => `${Math.round(v * 1000) / 10}%`;
@@ -36,14 +38,24 @@ export function postersView(state: GameState): SheetView {
 }
 
 export function nephewsView(state: GameState): SheetView {
+  const ledger = ledgerOf(state);
+  // income before the family's cut, so each nephew's share can be shown in Taka
+  const share = totalSkim(state);
+  const gross = share < 1 ? totalIncome(state, false) / (1 - share) : 0;
   const rows: SheetRow[] = NEPHEW_IDS.map((id) => {
     const n = state.nephews[id];
-    const unlocked = nephewUnlocked(state, id);
+    const unlocked = n.hired || nephewUnlocked(state, id);
     const shownLevel = n.level;
     const effect = n.hired ? nephewEffect(state, id) : NEPHEWS[id].effect + NEPHEWS[id].effectPerLevel * shownLevel;
     const does = fmt(STRINGS.nephews.does[id], { pct: pct(effect), hours: effect });
     const skim = n.hired ? nephewSkim(state, id) : Math.max(0, NEPHEWS[id].skim - NEPHEWS[id].skimPerLevel * shownLevel);
-    const lines = unlocked ? [does, fmt(STRINGS.nephews.skim, { pct: pct(skim) }), fmt(STRINGS.nephews.level, { n: n.level, max: NEPHEW_MAX_LEVEL })] : [fmt(STRINGS.nephews.locked, { when: STRINGS.nephews.unlock[id] })];
+    const skimLine = n.hired
+      ? fmt(STRINGS.nephews.skimLedger, { pct: pct(skim), rate: formatRate(gross * skim), total: formatTaka(ledger.skimmed[id] ?? 0) })
+      : fmt(STRINGS.nephews.skim, { pct: pct(skim) });
+    const lines = unlocked ? [does, skimLine, fmt(STRINGS.nephews.level, { n: n.level, max: NEPHEW_MAX_LEVEL })] : [fmt(STRINGS.nephews.locked, { when: STRINGS.nephews.unlock[id] })];
+    if (id === 'rony' && (n.hired || ledger.ronyBags > 0)) {
+      lines.splice(1, 0, fmt(STRINGS.nephews.ronyLedger, { amount: formatTaka(ledger.ronyCollected), bags: ledger.ronyBags === 1 ? STRINGS.nephews.bags.one : fmt(STRINGS.nephews.bags.many, { n: ledger.ronyBags }), kept: formatTaka(ledger.ronyKept) }));
+    }
     const buttons: SheetRow['buttons'] = [];
     if (unlocked && !n.hired) {
       const cost = nephewHireCost(state);
@@ -63,7 +75,11 @@ export function nephewsView(state: GameState): SheetView {
   return {
     title: STRINGS.nephews.title,
     intro: STRINGS.nephews.intro,
-    status: fmt(STRINGS.nephews.totalSkim, { pct: pct(totalSkim(state)) }),
+    status: fmt(STRINGS.nephews.totalSkim, {
+      pct: pct(share),
+      rate: formatRate(gross * share),
+      total: formatTaka(Object.values(ledger.skimmed).reduce((a, b) => a + (b ?? 0), 0)),
+    }),
     rows,
   };
 }

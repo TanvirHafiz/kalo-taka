@@ -1,7 +1,7 @@
 // The corruption layer: permits and speed money, heat meters, inquiries, Influence and nephews.
 // Pure functions over state; the clock is state.lastSimTime (or `now` passed by the tick).
 import { BALANCE, CORRUPTION, NEPHEWS, NEPHEW_MAX_LEVEL, RONY_AT_BUILDINGS, RONY_WAIT_MS, type NephewId } from '../config/balance';
-import type { Building, GameState, Job, Plot, SimEvent } from '../state/types';
+import type { Building, GameState, Job, NephewLedger, Plot, SimEvent } from '../state/types';
 import { rngStep } from '../util/rng';
 import { baseIncome, plotIncome, skimShare } from './economy';
 import { EVENT_TUNING, PRESTIGE } from '../config/events';
@@ -238,12 +238,35 @@ export function updateMilestones(state: GameState): GameState {
   return { ...state, milestones: { ...m, maxBuildings: Math.max(m.maxBuildings, count), firstTier5: m.firstTier5 || tier5 } };
 }
 
+const EMPTY_LEDGER: NephewLedger = { skimmed: {}, ronyBags: 0, ronyCollected: 0, ronyKept: 0 };
+
+export function ledgerOf(state: GameState): NephewLedger {
+  return state.ledger ?? EMPTY_LEDGER;
+}
+
+/** Book what the nephews skimmed off `netEarned` (income after their cut). */
+export function bookSkim(state: GameState, netEarned: number): GameState {
+  const share = totalSkim(state);
+  if (share <= 0 || netEarned <= 0 || share >= 1) return state;
+  const gross = netEarned / (1 - share);
+  const l = ledgerOf(state);
+  const skimmed = { ...l.skimmed };
+  for (const id of NEPHEW_IDS) {
+    const cut = nephewSkim(state, id);
+    if (cut > 0) skimmed[id] = (skimmed[id] ?? 0) + gross * cut;
+  }
+  return { ...state, ledger: { ...l, skimmed } };
+}
+
 /** Rony collects a bag that has waited RONY_WAIT_MS, at his share of its value. */
 export function ronyCollects(state: GameState, now: number, incomeScale = 1): GameState {
   if (!state.bag || !state.nephews.rony.hired) return state;
   if (now < (state.bag.at ?? 0) + RONY_WAIT_MS) return state;
-  const pay = plotIncome(state, state.bag.plot) * BALANCE.bagSeconds * nephewEffect(state, 'rony') * incomeScale;
-  const s = { ...state, bag: null, taka: state.taka + pay, lifetimeEarnings: state.lifetimeEarnings + pay };
+  const full = plotIncome(state, state.bag.plot) * BALANCE.bagSeconds * incomeScale;
+  const pay = full * Math.min(1, nephewEffect(state, 'rony'));
+  const l = ledgerOf(state);
+  const ledger = { ...l, ronyBags: l.ronyBags + 1, ronyCollected: l.ronyCollected + pay, ronyKept: l.ronyKept + (full - pay) };
+  const s = { ...state, bag: null, taka: state.taka + pay, lifetimeEarnings: state.lifetimeEarnings + pay, ledger };
   return withEvent(scheduleBag(s, now), { kind: 'bagAuto', amount: pay });
 }
 

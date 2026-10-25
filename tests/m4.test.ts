@@ -321,3 +321,20 @@ describe('calendar and journalists', () => {
     expect(journalistCost({ ...s, influence: 100 })).toBeLessThan(journalistCost(s));
   });
 });
+
+describe('nephew ledger', () => {
+  it('books each nephew\'s skim and what Rony brings in and keeps', () => {
+    let s = city({ 0: H(3), 1: H(3), 2: H(3), 3: H(3), 4: H(3) });
+    s = { ...s, nephews: { ...s.nephews, rony: { hired: true, level: 0 }, polash: { hired: true, level: 0 } } };
+    const net = totalIncome(s);
+    const share = NEPHEWS.rony.skim + NEPHEWS.polash.skim;
+    const after = tick(s, 10, T0 + 10_000);
+    const gross = (net * 10) / (1 - share);
+    expect(after.ledger!.skimmed.rony).toBeCloseTo(gross * NEPHEWS.rony.skim, 3);
+    expect(after.ledger!.skimmed.polash).toBeCloseTo(gross * NEPHEWS.polash.skim, 3);
+    const withBag = { ...after, bag: { plot: after.plots[0]!.index, kind: 'bhara' as const, at: T0 } };
+    const got = at(withBag, T0 + 10_000 + RONY_WAIT_MS);
+    expect(got.ledger!.ronyBags).toBe(1);
+    expect(got.ledger!.ronyCollected).toBeCloseTo(got.ledger!.ronyKept, 3);
+  });
+});

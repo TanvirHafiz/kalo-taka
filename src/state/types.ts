@@ -108,6 +108,17 @@ export interface GameState {
   stats: { runs: number; bestIncome: number };
   /** Highest number of districts ever opened (kept for the codex). */
   districtsSeen: number;
+  /** What the nephews took and brought in this run (missing in older saves = nothing yet). */
+  ledger?: NephewLedger;
+}
+
+export interface NephewLedger {
+  /** Taka each nephew has skimmed off your income. */
+  skimmed: Partial<Record<NephewId, number>>;
+  /** Bags Rony collected, what he handed over, and what he kept. */
+  ronyBags: number;
+  ronyCollected: number;
+  ronyKept: number;
 }
 
 export interface ActiveEvent {

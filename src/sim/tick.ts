@@ -1,7 +1,7 @@
 import { BALANCE } from '../config/balance';
 import type { GameState } from '../state/types';
 import { totalIncome } from './economy';
-import { completeDueJobs, maybeEndInquiry, maybeStartInquiry, nextDeadline, ronyCollects, updateHeat, updateMilestones } from './corruption';
+import { bookSkim, completeDueJobs, maybeEndInquiry, maybeStartInquiry, nextDeadline, ronyCollects, updateHeat, updateMilestones } from './corruption';
 import { eventFlow, maybeEndEvent, maybeStartEvent } from './events';
 import { districtCount } from './layout';
 import { growWorld, updatePickups, updateUnlocks } from './progress';
@@ -53,6 +53,7 @@ export function tick(state: GameState, dtSec: number, now: number, catchingUp = 
     lastSimTime: now,
     posters: state.posters.some((t) => t <= now) ? state.posters.filter((t) => t > now) : state.posters,
   };
+  s = bookSkim(s, earned);
   s = updateHeat(s, dtSec);
   s = eventFlow(s, dtSec, incomeScale).state;
   s = completeDueJobs(s, now);
