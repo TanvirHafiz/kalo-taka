@@ -104,7 +104,9 @@ export function canSpeedMoney(state: GameState, plot: number): ErrorKey | null {
 export function evictRefund(state: GameState, plot: number): number {
   const b = plotById(state, plot)?.building;
   if (!b) return 0;
-  const paid = (tierDef(b.category, b.tier)?.baseCost ?? 0) + upgradeCostN({ ...b, level: 1 }, b.level - 1);
+  // merged buildings start above level 1, so only the levels after that were paid for
+  const from = b.tier > 1 ? Math.min(b.level, BALANCE.mergeResultLevel) : 1;
+  const paid = (tierDef(b.category, b.tier)?.baseCost ?? 0) + upgradeCostN({ ...b, level: from }, b.level - from);
   return Math.floor(paid * CORRUPTION.evictRefund);
 }
 
@@ -171,7 +173,7 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       const error = canMerge(state, left, right);
       if (error) return { state, error };
       const b = plotById(state, left)!.building!;
-      const result: Building = { category: b.category, tier: b.tier + 1, level: 1 };
+      const result: Building = { category: b.category, tier: b.tier + 1, level: BALANCE.mergeResultLevel };
       const secs = permitSeconds(state, 'merge', result.tier);
       const lead = newJob('merge', now, secs, { result, partner: right });
       const lock = newJob('merge', now, secs, { partner: left });

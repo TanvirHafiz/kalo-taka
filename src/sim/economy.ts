@@ -122,11 +122,11 @@ export function patients(state: GameState, b: Building): number {
   return Math.round(occupancy(state, b) * (PATIENT_CAPACITY[b.tier] ?? 0));
 }
 
-/** Cost to go from `level` to `level + 1`: baseCost * 1.18^level, rounded up to whole Taka. */
+/** Cost to go from `level` to `level + 1`: baseCost x growth^level x upgradeCostMult, rounded up. */
 export function upgradeCost(b: Building): number {
   const def = tierDef(b.category, b.tier);
   if (!def) return Infinity;
-  return Math.ceil(def.baseCost * BALANCE.upgradeCostGrowth ** b.level);
+  return Math.ceil(def.baseCost * BALANCE.upgradeCostGrowth ** b.level * BALANCE.upgradeCostMult);
 }
 
 /** Total cost of `count` consecutive upgrades from the current level (for buy-max later). */

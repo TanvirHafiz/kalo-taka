@@ -1,15 +1,15 @@
-import { MONEY_SCALE as S } from '../src/config/balance';
+import { BALANCE, MONEY_SCALE as S } from '../src/config/balance';
 import { describe, expect, it } from 'vitest';
 
 import { mergeBlocker, mergeFee, mergePartners } from '../src/sim/merge';
 import { act, tin, withBuildings } from './helpers';
 
 describe('merge rules', () => {
-  it('two adjacent maxed same-tier buildings merge into next tier level 1 on the left plot', () => {
+  it('two adjacent maxed same-tier buildings merge into the next tier on the left plot, at the merge level', () => {
     const s = withBuildings({ 3: tin(10), 4: tin(10) });
     const r = act(s, { type: 'merge', a: 4, b: 3 });
     expect(r.error).toBeUndefined();
-    expect(r.state.plots[3]!.building).toEqual({ category: 'housing', tier: 2, level: 1 });
+    expect(r.state.plots[3]!.building).toEqual({ category: 'housing', tier: 2, level: BALANCE.mergeResultLevel });
     expect(r.state.plots[4]!.building).toBeNull();
     expect(r.state.plots[4]!.owned).toBe(true);
   });

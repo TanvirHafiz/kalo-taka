@@ -21,9 +21,10 @@ const front = (s: GameState, slot: number) => s.plots.find((p) => p.slot === slo
 
 describe('eviction drive', () => {
   it('frees the plot, refunds a share of what the building cost and raises heat', () => {
-    const s = city({ 0: { category: 'food', tier: 1, level: 1 }, 1: H(2, 3), 2: { category: 'food', tier: 1, level: 1 } });
+    const s = city({ 0: { category: 'food', tier: 1, level: 1 }, 1: H(2, 6), 2: { category: 'food', tier: 1, level: 1 } });
     const id = front(s, 1).index;
-    const paid = tierDef('housing', 2)!.baseCost + upgradeCost(H(2, 1)) + upgradeCost(H(2, 2));
+    // a merged tier 2 starts at level 4, so only levels 4 and 5 were bought
+    const paid = tierDef('housing', 2)!.baseCost + upgradeCost(H(2, 4)) + upgradeCost(H(2, 5));
     expect(evictRefund(s, id)).toBe(Math.floor(paid * CORRUPTION.evictRefund));
     const r = applyAction(s, { type: 'evict', plot: id });
     expect(r.error).toBeUndefined();

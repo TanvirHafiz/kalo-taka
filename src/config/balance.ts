@@ -24,12 +24,19 @@ export const BALANCE = {
   plotCostGrowth: 1.35,
 
   upgradeCostGrowth: 1.18,
+  /** Upgrade prices are this share of the spec formula (baseCost x growth^level). Tuned in M6. */
+  upgradeCostMult: 1,
   /** Each level above 1 adds this fraction of base income. */
   incomePerLevel: 0.25,
   maxLevel: 10,
 
   /** Merge fee is this multiple of the target tier's baseCost. */
   mergeFeeMult: 2,
+  /**
+   * Level a merged building starts at (spec: 1). At 4 the new building earns about what the two
+   * maxed ones did, so a merge never cuts income (your choice, M6).
+   */
+  mergeResultLevel: 4,
 
   /** Occupancy before heat/anger effects (those arrive in M4). */
   baseOccupancy: 0.9,

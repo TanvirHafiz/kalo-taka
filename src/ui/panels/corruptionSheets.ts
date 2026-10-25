@@ -75,7 +75,7 @@ export function nephewsView(state: GameState): SheetView {
   return {
     title: STRINGS.nephews.title,
     intro: STRINGS.nephews.intro,
-    status: fmt(STRINGS.nephews.totalSkim, {
+    status: fmt(STRINGS.nephews.sheetSkim, {
       pct: pct(share),
       rate: formatRate(gross * share),
       total: formatTaka(Object.values(ledger.skimmed).reduce((a, b) => a + (b ?? 0), 0)),

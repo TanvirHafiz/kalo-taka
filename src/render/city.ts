@@ -225,6 +225,8 @@ export type Pick = { kind: 'plot'; plot: number } | { kind: 'bag' } | { kind: 'b
 
 /** Owns everything visual that lives between frames: traffic, people, animations and hit areas. */
 const BUBBLE_MS = 3800;
+/** Screen pixels kept clear at the bottom for the ticker and the button row. */
+const BOAT_CLEAR_PX = 110;
 const BUBBLE_EVERY_MS = 3200;
 
 export class CityRenderer {
@@ -235,7 +237,8 @@ export class CityRenderer {
   private lights: CanvasRenderingContext2D | null = null;
   /** Screen-space rectangles of tappable pickups from the last frame. */
   private bagRect: [number, number, number, number] | null = null;
-  private boatRects: [number, number, number, number][] = [];
+  /** Screen-space tap areas of this frame's boats (public for the debug console). */
+  boatRects: [number, number, number, number][] = [];
   /** Speech bubbles above buildings. */
   private bubbles: { plot: number; text: string; born: number }[] = [];
   private nextBubble = 0;
@@ -594,12 +597,16 @@ export class CityRenderer {
     }
     if (ev?.id === 'monsoon' && (ev.boats ?? 0) < EVENT_TUNING.boatsPerMonsoon) {
       const span = cam.viewW / cam.zoom;
+      // mid-road, and always clear of the ticker and button row along the bottom of the screen
+      const laneY = Math.min(farY, (cam.viewH - BOAT_CLEAR_PX - gy) / cam.zoom);
       for (let i = 0; i < 2; i++) {
         const bx = cam.x + ((timeSec * 26 + i * span * 0.55) % (span + 80)) - 40;
-        const by = nearY - 10 + Math.sin(timeSec * 2 + i) * 3;
+        const by = laneY + Math.sin(timeSec * 2 + i) * 3;
         drawBoat(ctx, bx, by);
+        // a generous tap area (at least 48 px) since the boats keep moving
         const sx = (bx - cam.x) * cam.zoom, sy = gy + by * cam.zoom;
-        this.boatRects.push([sx - 24 * cam.zoom, sy - 50 * cam.zoom, 48 * cam.zoom, 54 * cam.zoom]);
+        const w = Math.max(48, 56 * cam.zoom), h = Math.max(56, 64 * cam.zoom);
+        this.boatRects.push([sx - w / 2, sy - h + 10, w, h]);
       }
     }
     ctx.restore();

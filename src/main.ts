@@ -9,6 +9,7 @@ import { ZOOM_MAX, ZOOM_MIN, createCamera, clampCamera, clampCameraY, screenToWo
 import { CityRenderer, fitZoom, maxPanY, plotCenter, worldWidth } from './render/city';
 import { clearSceneCache } from './render/scene';
 import { DISTRICTS } from './config/buildings';
+import { EVENT_TUNING } from './config/events';
 import { applyAction, bagValue, evictRefund } from './sim/actions';
 import { EVENT_CHOICES, canChoose, choiceCost, freeLotFor } from './sim/events';
 import { offlineCatchUp } from './sim/offline';
@@ -160,6 +161,10 @@ function dispatch(action: Action): boolean {
   } else if (action.type === 'poster') {
     showToast(STRINGS.toasts.poster);
     ticker.push(TICKER.poster);
+  } else if (action.type === 'eventChoice' && action.choice === 'boat') {
+    const left = EVENT_TUNING.boatsPerMonsoon - (state.event?.boats ?? EVENT_TUNING.boatsPerMonsoon);
+    const amount = formatTaka(state.taka - before.taka);
+    showToast(left > 0 ? fmt(STRINGS.toasts.boat, { amount, left }) : fmt(STRINGS.toasts.boatLast, { amount }));
   } else if (action.type === 'eventChoice' && action.choice === 'spree') {
     postersSheet.open();
     postersSheet.update(state);
@@ -365,6 +370,8 @@ const debug = new URLSearchParams(location.search).has('debug')
       },
     })
   : null;
+// in debug mode the renderer and camera are reachable from the console (for inspecting hit areas)
+if (debug) Object.assign(window, { kaloDebug: { city, cam, get state() { return state; } } });
 const IDLE_MS = 100_000;
 let idleIn = IDLE_MS;
 function frame(): void {

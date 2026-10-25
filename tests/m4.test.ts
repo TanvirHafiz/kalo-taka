@@ -61,9 +61,11 @@ describe('permits', () => {
     expect(totalIncome(s)).toBeCloseTo(before);
     expect(applyAction(s, { type: 'upgrade', plot: 1 }).error).toBe('permitPending');
     s = at(s, T0 + 120_000);
-    expect(plot(s, 0).building).toEqual(H(2));
+    expect(plot(s, 0).building).toEqual(H(2, BALANCE.mergeResultLevel));
     expect(plot(s, 1).building).toBeNull();
     expect(s.milestones.firstMerge).toBe(true);
+    // starting at the merge level, the new building earns about what the two maxed ones did
+    expect(totalIncome(s)).toBeGreaterThan(before * 0.95);
   });
 
   it('speed money: remaining x income x 0.5 x influence discount, finishes now, +1 committee', () => {
