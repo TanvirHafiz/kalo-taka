@@ -61,7 +61,8 @@ export interface GameState {
   /** mulberry32 state for sim randomness (bags, briefcase timing). */
   rng: number;
   /** The floating cash bag, if one is waiting to be tapped. */
-  bag: { plot: number; kind: BagKind } | null;
+  /** `at`: when it appeared (sim ms); missing in older saves. */
+  bag: { plot: number; kind: BagKind; at?: number } | null;
   nextBagAt: number;
   /** Golden briefcase is visible until this time (0 = not shown). */
   briefcaseUntil: number;

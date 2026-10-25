@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE, CORRUPTION, NEPHEWS } from '../src/config/balance';
+import { BALANCE, CORRUPTION, NEPHEWS, RONY_WAIT_MS } from '../src/config/balance';
 import { applyAction } from '../src/sim/actions';
 import {
   activeCampaigns, effectiveInfluence, heatGainMult, inquiryCost, maybeStartInquiry, nephewHireCost, permitSeconds,
@@ -213,12 +213,16 @@ describe('nephews', () => {
     expect(totalIncome(s)).toBeCloseTo(before * (1 - NEPHEWS.rony.skim));
   });
 
-  it('Rony collects bags at 50% by himself; Polash cuts permits by 25%', () => {
+  it('Rony collects bags at 50% by himself after 10 s; Polash cuts permits by 25%', () => {
     let s = city({ 0: H(3), 1: H(3), 2: H(3), 3: H(3), 4: H(3) });
     s = { ...s, milestones: { firstMerge: true, firstInquiry: true, firstTier5: true, maxBuildings: 5 }, nephews: { ...s.nephews, rony: { hired: true, level: 0 }, polash: { hired: true, level: 0 } } };
     expect(permitSeconds(s, 'build', 1)).toBeCloseTo(CORRUPTION.permitBuild * 0.75);
     s = { ...s, nextBagAt: T0 };
-    const n = at(s, T0 + 250);
+    // he leaves a fresh bag alone for 10 s so a watching player can tap it at full value
+    const fresh = at(s, T0 + 250);
+    expect(fresh.bag).not.toBeNull();
+    expect(fresh.events.some((e) => e.kind === 'bagAuto')).toBe(false);
+    const n = at(fresh, T0 + 250 + RONY_WAIT_MS);
     expect(n.bag).toBeNull();
     const auto = n.events.find((e) => e.kind === 'bagAuto');
     expect(auto).toBeDefined();

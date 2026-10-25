@@ -156,6 +156,8 @@ export const NEPHEWS: Record<NephewId, NephewDef> = {
 };
 /** Buildings owned at once that unlock Rony. */
 export const RONY_AT_BUILDINGS = 5;
+/** Rony leaves a new bag alone this long, so a player who is watching can tap it at full value. */
+export const RONY_WAIT_MS = 10_000;
 /** Max nephew upgrade level. */
 export const NEPHEW_MAX_LEVEL = 5;
 

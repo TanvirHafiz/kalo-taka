@@ -91,7 +91,7 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 - Nephews:
   - Hire costs 2 min of income; upgrades cost 3, 6, 12, 24 and 48 min (your choice). Each upgrade improves the effect and lowers the skim. Levels are kept if you fire one, and firing adds +15 Tenant Anger ("Your Khala is upset").
   - Unlocks: Rony at 5 buildings, Polash at your first merge, Mithu at your first inquiry, Dipu at your first tier 5.
-  - Rony auto-collects bags at 50%+. Dipu raises the offline cap (M5).
+  - Rony auto-collects bags at 50%+ (plus 10% per level). Since M5 he waits 10 s after a bag appears, so you can still tap it yourself at full value. Dipu raises the offline cap (M5).
   - The total skim is shown next to income in the HUD.
 - Tenant fixes on housing cards: water pump (15 s of housing income, -20 Anger) and allow bachelors (once, -10).
 - Catch-up while the tab is hidden now steps at most 5 s at a time, cut at every permit, inquiry, poster and boost deadline, so heat, inquiries and permits play out in order.

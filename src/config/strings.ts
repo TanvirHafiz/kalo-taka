@@ -149,7 +149,7 @@ export const STRINGS = {
     totalSkim: 'Nephews skim {pct}',
     names: { rony: 'Rent Collector Rony', polash: 'Permit Bhai Polash', mithu: 'Media Bhagne Mithu', dipu: 'Driver Dipu' },
     does: {
-      rony: 'Collects cash bags for you at {pct} value',
+      rony: 'Collects cash bags you leave for 10 s, at {pct} value',
       polash: 'Permit waits {pct} shorter',
       mithu: 'Media Heat fades {pct} faster',
       dipu: 'Offline earnings cap {hours} h (from the next update)',

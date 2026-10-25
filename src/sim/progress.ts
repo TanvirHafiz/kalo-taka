@@ -72,7 +72,7 @@ export function updatePickups(state: GameState, now: number, catchingUp: boolean
       const [pv, r1] = rngStep(s.rng);
       const [kv, r2] = rngStep(r1);
       const plot = built[Math.floor(pv * built.length)]!.index;
-      s = { ...s, rng: r2, bag: { plot, kind: BAG_KINDS[Math.floor(kv * BAG_KINDS.length)]! } };
+      s = { ...s, rng: r2, bag: { plot, kind: BAG_KINDS[Math.floor(kv * BAG_KINDS.length)]!, at: now } };
     } else {
       s = scheduleBag(s, now);
     }
