@@ -270,9 +270,8 @@ html, body {
   .button-row button { min-width: 46px; padding: 4px 6px; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .panel, .toast { transition: none; animation: none; }
-}
+/* reduce motion follows the setting (system by default); settings.ts sets the class */
+.reduce-motion .panel, .reduce-motion .toast { transition: none; animation: none; }
 
 /* Wide screens: the card and sheets dock in the empty top-right corner instead of covering the street. */
 @media (min-width: 760px) {
@@ -366,9 +365,7 @@ html, body {
   font-family: var(--font); font-size: 15px; font-weight: 800; padding: 6px 16px;
   border: none; border-radius: 10px; background: var(--paper); color: var(--ink); box-shadow: var(--lift); cursor: pointer;
 }
-@media (prefers-reduced-motion: reduce) {
-  .button-row button.pulse, .mamun-card, .panel-buttons button.armed { animation: none; }
-}
+.reduce-motion .button-row button.pulse, .reduce-motion .mamun-card, .reduce-motion .panel-buttons button.armed { animation: none; }
 
 /* ---- Debug panel (?debug only) ---- */
 .debug {
@@ -402,3 +399,23 @@ html, body {
   font-family: var(--font); font-size: 14px; font-weight: 800; background: var(--paper); color: var(--ink);
 }
 .move-banner button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* ---- Settings sheet ---- */
+.settings .set-body { display: grid; gap: 6px; max-height: 60vh; overflow-y: auto; padding-right: 2px; }
+.settings h3 { margin: 8px 0 0; font-size: 13px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; }
+.set-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) 32px; align-items: center; gap: 8px; min-height: 44px; font-size: 15px; font-weight: 700; }
+.set-row select { grid-column: 2 / 4; min-height: 40px; font: 700 14px var(--font); color: var(--ink); background: var(--paper-2); border: none; border-radius: 9px; padding: 0 8px; }
+.set-row input[type="range"] { width: 100%; min-height: 32px; accent-color: var(--ok); }
+.set-row output { font-variant-numeric: tabular-nums; text-align: right; color: var(--muted); font-size: 13px; }
+.set-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.set-actions button, .set-box button {
+  min-height: 44px; padding: 0 14px; border: none; border-radius: 10px; cursor: pointer;
+  font: 800 15px var(--font); background: var(--ok); color: #fffaf0;
+}
+.set-actions button.danger { background: #8a3a2b; }
+.set-actions button.danger.armed { background: var(--accent); }
+.set-box { display: grid; gap: 6px; }
+.set-box[hidden] { display: none; }
+.set-box p, .set-note { margin: 0; font-size: 13px; color: var(--muted); font-weight: 600; }
+.set-box textarea { width: 100%; box-sizing: border-box; font: 12px ui-monospace, monospace; border-radius: 8px; border: 1px solid var(--kraft); background: var(--paper-2); color: var(--ink); padding: 6px; resize: vertical; }
+.settings button:focus-visible, .settings select:focus-visible, .settings input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }

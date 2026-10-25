@@ -39,8 +39,29 @@ export function suffixFor(k: number): string {
   return first + second;
 }
 
+export type NumberMode = 'bd' | 'short';
+let mode: NumberMode = 'bd';
+/** Bangladeshi units (lakh, crore) or short scientific (K, M, B, T, then 1.2e15). */
+export function setNumberMode(m: NumberMode): void {
+  mode = m;
+}
+
+function formatShort(n: number): string {
+  const sign = n < 0 ? '-' : '';
+  const v = Math.abs(n);
+  if (v < 1e3) return sign + Math.floor(v).toString();
+  const units: [number, string][] = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
+  if (v >= 1e15) {
+    const e = Math.floor(Math.log10(v) + 1e-9);
+    return `${sign}${truncFixed(v / 10 ** e, 2)}e${e}`;
+  }
+  const [div, u] = units.find(([d]) => v >= d)!;
+  return `${sign}${truncFixed(v / div, 2)}${u}`;
+}
+
 /** Format an amount without the currency sign. */
 export function formatAmount(n: number): string {
+  if (mode === 'short' && Number.isFinite(n)) return formatShort(n);
   if (!Number.isFinite(n)) return n > 0 ? 'a lot' : '0';
   const sign = n < 0 ? '-' : '';
   const v = Math.abs(n);

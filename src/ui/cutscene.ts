@@ -5,6 +5,7 @@ import { PRESTIGE } from '../config/events';
 import { FLEE } from '../config/strings';
 import { box, circle, fitText, line, poly, roundBox, setPaperMode, type Ctx } from '../render/draw';
 import { drawAvatar } from '../render/portrait';
+import { reduceMotion } from '../util/settings';
 
 export function playCutscene(root: HTMLElement, seed: number, stars: number, onDone: () => void): void {
   const el = document.createElement('div');
@@ -14,7 +15,7 @@ export function playCutscene(root: HTMLElement, seed: number, stars: number, onD
   const canvas = el.querySelector('canvas')!;
   const ctx = canvas.getContext('2d')!;
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = reduceMotion();
   let raf = 0;
   let finished = false;
   const finish = () => {

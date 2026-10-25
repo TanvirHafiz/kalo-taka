@@ -1,5 +1,4 @@
 // Bottom-right button row: Build, Posters, Nephews, Flee (when available) and Settings.
-// Settings arrives in a later milestone and says so when tapped.
 import { STRINGS, fmt } from '../config/strings';
 
 export interface ButtonRow {
@@ -23,7 +22,7 @@ export function createButtonRow(root: HTMLElement, handlers: Partial<Record<stri
     ['posters', STRINGS.buttons.posters, true],
     ['nephews', STRINGS.buttons.nephews, true],
     ['flee', STRINGS.buttons.flee, true],
-    ['settings', STRINGS.buttons.settings, false],
+    ['settings', STRINGS.buttons.settings, true],
   ];
   el.innerHTML = items
     .map(([k, label, ready]) => `<button type="button" data-k="${k}" class="${ready ? '' : 'later'}"${k === 'flee' ? ' hidden' : ''}><svg viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg><span>${label}</span></button>`)

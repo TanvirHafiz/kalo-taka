@@ -36,6 +36,12 @@ import { createSheet } from './ui/panels/sheet';
 import { initToasts, showToast } from './ui/toasts';
 import { formatTaka } from './util/money';
 import { randomSeed } from './util/rng';
+import { getSettings, loadSettings, onSettings } from './util/settings';
+import { setNumberMode } from './util/money';
+import { createAudio } from './ui/audio';
+import { createSettingsPanel } from './ui/panels/settingsPanel';
+import { trafficFill } from './render/streetlife';
+import { baseIncome } from './sim/economy';
 
 const app = document.getElementById('app')!;
 const canvas = document.createElement('canvas');
@@ -74,6 +80,10 @@ function endMove(): void {
 }
 const cam = createCamera();
 const city = new CityRenderer();
+loadSettings();
+setNumberMode(getSettings().numbers);
+onSettings((s) => setNumberMode(s.numbers));
+const audio = createAudio();
 const ticker = createTicker(overlay);
 const mamun = createMamun(overlay, dispatch, () => {
   if (!state.tutorial.done) sayTutorial(state.tutorial.step);
@@ -120,14 +130,19 @@ function drainEvents(): void {
   for (const e of state.events) {
     if (e.kind === 'built') {
       city.effects.build(e.plot, now);
+      audio.play('stamp');
       const b = plotById(state, e.plot)?.building;
       if (b) {
         showToast(fmt(STRINGS.toasts.built, { name: tierDef(b.category, b.tier)?.name ?? '' }));
         ticker.push(TICKER.built, { building: tierDef(b.category, b.tier)?.name ?? '' });
       }
-    } else if (e.kind === 'upgraded') city.effects.upgrade(e.plot, now);
+    } else if (e.kind === 'upgraded') {
+      city.effects.upgrade(e.plot, now);
+      audio.play('stamp');
+    }
     else if (e.kind === 'merged') {
       city.effects.merge(e.left, e.right, e.oldLeft, e.oldRight, now);
+      audio.play('merge');
       const b = plotById(state, e.left)?.building;
       if (b) {
         showToast(fmt(STRINGS.toasts.merged, { name: tierDef(b.category, b.tier)?.name ?? '' }));
@@ -138,6 +153,7 @@ function drainEvents(): void {
       const name = b ? (tierDef(b.category, b.tier)?.name ?? '') : '';
       showToast(fmt(STRINGS.toasts.inquiry, { name }));
       ticker.push(TICKER.inquiry, { building: name });
+      audio.play('siren');
     } else if (e.kind === 'inquiryOver') {
       showToast(STRINGS.toasts.inquiryOver);
       ticker.push(TICKER.inquiryOver);
@@ -158,6 +174,9 @@ function drainEvents(): void {
       if (plotById(state, e.from)?.building) city.effects.build(e.from, now);
       showToast(fmt(STRINGS.toasts.moved, { name }));
       ticker.push(TICKER.moved, { building: name });
+      audio.play('stamp');
+    } else if (e.kind === 'bagAuto') {
+      audio.play('coin');
     }
   }
   state = { ...state, events: [] };
@@ -178,6 +197,8 @@ function dispatch(action: Action): boolean {
     return false;
   }
   state = result.state;
+  if (action.type === 'collectBag' || action.type === 'collectBriefcase' || action.type === 'eventChoice') audio.play(action.type === 'collectBag' ? 'bag' : 'coin');
+  else if (action.type === 'build' || action.type === 'upgrade' || action.type === 'buyPlot' || action.type === 'merge') audio.play('coin');
   if (action.type === 'collectBag' && bag) showToast(fmt(STRINGS.bags.collected, { kind: STRINGS.bags[bag.kind], amount: formatTaka(bag.value) }));
   else if (action.type === 'collectBriefcase') showToast(STRINGS.toasts.briefcase);
   else if (action.type === 'speedMoney') {
@@ -236,13 +257,41 @@ function openBuild(): void {
 const postersSheet = createSheet(overlay, postersView, dispatch, () => closeAll());
 const nephewsSheet = createSheet(overlay, nephewsView, dispatch, () => closeAll());
 const fleeSheet = createSheet(overlay, fleeView, dispatch, () => closeAll());
+const settingsPanel = createSettingsPanel(overlay, {
+  getState: () => state,
+  load: (next) => replaceState({ ...next, lastSimTime: Date.now(), events: [] }),
+  reset: () => {
+    replaceState(createInitialState(randomSeed(), Date.now()));
+    sayTutorial(0);
+  },
+  toast: showToast,
+  onOpen: () => closeAll(),
+});
+
+/** Swap in a whole new game (import or hard reset) and save it at once, so autosave cannot undo it. */
+function replaceState(next: GameState): void {
+  closeAll();
+  endMove();
+  mamun.clear();
+  state = next;
+  saveGame(localStorage, state);
+  city.reset();
+  cam.x = 0;
+  cam.y = 0;
+  knownNephews.clear();
+  for (const id of NEPHEW_IDS) if (nephewUnlocked(state, id)) knownNephews.add(id);
+  hud.update(state, 0);
+}
+
 function closeAll(): void {
+  settingsPanel?.close();
   panel.close();
   postersSheet.close();
   nephewsSheet.close();
   fleeSheet.close();
 }
 const buttons = createButtonRow(overlay, {
+  settings: () => settingsPanel.open(),
   flee: () => {
     fleeSheet.open();
     fleeSheet.update(state);
@@ -411,6 +460,8 @@ const debug = new URLSearchParams(location.search).has('debug')
 // in debug mode the renderer and camera are reachable from the console (for inspecting hit areas)
 if (debug) Object.assign(window, { kaloDebug: { city, cam, get state() { return state; } } });
 const IDLE_MS = 100_000;
+/** Next rickshaw bell or crow, in ms. */
+let ambientIn = 30_000;
 let idleIn = IDLE_MS;
 function frame(): void {
   const t0 = performance.now();
@@ -444,6 +495,12 @@ function frame(): void {
     mamun.refresh(mamunButtons);
   }
   ticker.update(dtUi, tickerDefaults());
+  audio.setTraffic(trafficFill(baseIncome(state)));
+  ambientIn -= dtUi;
+  if (ambientIn <= 0) {
+    ambientIn = 25_000 + Math.random() * 35_000;
+    audio.play(Math.random() < 0.7 ? 'bell' : 'crow');
+  }
   mamun.tick(dtUi);
   idleIn -= dtUi;
   if (idleIn <= 0) {

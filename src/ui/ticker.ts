@@ -1,6 +1,7 @@
 // Bottom news ticker: a red TV strip with a BREAKING tag. Headlines come from the player's actions
 // and events (templates with {building} {district} {amount} {nephew} slots), mixed with filler.
 import { M5_TEXT, TICKER, fmt } from '../config/strings';
+import { getSettings, reduceMotion } from '../util/settings';
 
 export interface Ticker {
   push(templates: readonly string[], vars?: Record<string, string>): void;
@@ -25,7 +26,6 @@ export function createTicker(root: HTMLElement): Ticker {
   let showing = false;
   let defaults: Record<string, string> = {};
   const pick = <T,>(a: readonly T[]) => a[Math.floor(Math.random() * a.length)]!;
-  const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const next = () => {
     const line = queue.shift();
@@ -50,14 +50,14 @@ export function createTicker(root: HTMLElement): Ticker {
         queue.push({ template: pick(TICKER.filler), vars: {} });
       }
       if (!showing && !next()) return;
-      if (reduce) {
+      if (reduceMotion()) {
         // no scrolling: show each headline for a few seconds
         text.style.transform = 'translateX(0)';
         x -= dtMs * 0.2;
         if (x < -text.offsetWidth) showing = false;
         return;
       }
-      x -= (SPEED * dtMs) / 1000;
+      x -= (SPEED * getSettings().ticker * dtMs) / 1000;
       text.style.transform = `translateX(${x}px)`;
       if (x < -text.offsetWidth - 40) showing = false;
     },

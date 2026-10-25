@@ -51,6 +51,8 @@ export function createSheet(root: HTMLElement, view: (s: GameState) => SheetView
   const rowsEl = el.querySelector<HTMLElement>('.sheet-rows')!;
   const actions = new Map<string, Action>();
   let open = false;
+  // keyboard users land inside the sheet and go back where they were when it closes
+  let returnFocus: HTMLElement | null = null;
   el.querySelector('.panel-close')!.addEventListener('click', () => sheet.close());
   rowsEl.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('button');
@@ -64,14 +66,18 @@ export function createSheet(root: HTMLElement, view: (s: GameState) => SheetView
     },
     open() {
       onOpen();
+      returnFocus = document.activeElement as HTMLElement | null;
       open = true;
       el.classList.add('open');
       el.setAttribute('aria-hidden', 'false');
+      el.querySelector<HTMLElement>('.panel-close')!.focus();
     },
     close() {
+      if (!open) return;
       open = false;
       el.classList.remove('open');
       el.setAttribute('aria-hidden', 'true');
+      if (el.contains(document.activeElement)) returnFocus?.focus();
     },
     update(state) {
       if (!open) return;

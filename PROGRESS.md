@@ -149,11 +149,19 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 
 ## M6: Polish and balance (in progress)
 
-- [ ] Audio and settings panel; reduce-motion and keyboard navigation
+- [x] Audio and settings panel; reduce-motion and keyboard navigation
 - [x] Remaining districts
 - [x] A debug panel (hidden behind ?debug) with time-skip x10/x100, add money, set heat, trigger any event
 - [x] Balance pass with a headless sim
 - [ ] 60 fps on a mid-range Android phone with 40 buildings
+
+### Audio and settings
+
+- Sound is synthesized with Web Audio and starts on your first tap or key press; it pauses while the tab is hidden. Effects (each under 0.5 s): coin tick for purchases and pickups (at most 4 a second), bag pop, permit stamp, merge rumble and chime, a short two-tone inquiry siren, and now and then a rickshaw bell or a crow. A low street hum follows the traffic.
+- Music has its own volume slider but no track yet (as the spec says).
+- Settings (the Settings button): master, effects, street hum and music volume; motion (follow your device, reduce, or full; reduce stops shakes, dust, the ticker scroll and button pulses); numbers (lakh and crore, or short K/M/B/T then 1.2e15); news ticker speed; export save (a code to copy), import save (checked before it replaces anything), and hard reset with a second tap to confirm. Settings are stored apart from the save, so a reset or import keeps them.
+- Import and reset save the new game at once, so the autosave cannot write the old one back.
+- Keyboard: Tab moves through the HUD, buttons and panels, Enter activates, Esc closes panels and cancels a relocation. Sheets move focus to their close button when they open and hand it back when they close.
 
 ### Balance pass
 

@@ -5,6 +5,7 @@ import { VISUAL } from '../config/balance';
 import type { Building } from '../state/types';
 import { box, circle, line, type Ctx } from './draw';
 import { INK } from './palette';
+import { reduceMotion } from '../util/settings';
 
 const EVICT_DUST_MS = 900;
 
@@ -26,7 +27,6 @@ type Fx =
   | { kind: 'upgrade'; plot: number; start: number }
   | { kind: 'evict'; plot: number; start: number };
 
-const reduceMotion = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ease = (t: number) => 1 - (1 - t) ** 3;
 
 export class Effects {
