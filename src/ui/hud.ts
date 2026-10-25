@@ -1,11 +1,13 @@
 // Top HUD: avatar, Taka, income, the three heat gauges, Influence, Offshore Stars and the district.
-// Gauges show 0 until their systems arrive (M4, M5); every gauge has a label as well as a colour.
+// Offshore Stars stay 0 until M5; every gauge has a label as well as a colour. The nephews' cut is
+// shown honestly next to income.
 import { DISTRICTS } from '../config/buildings';
-import { STRINGS } from '../config/strings';
+import { STRINGS, fmt } from '../config/strings';
+import { effectiveInfluence, totalSkim } from '../sim/corruption';
 import { isBoosted, totalIncome } from '../sim/economy';
 import type { GameState } from '../state/types';
 import { formatRate, formatTaka } from '../util/money';
-import { drawAvatar } from './avatar';
+import { drawAvatar } from '../render/portrait';
 
 export interface Hud {
   update(state: GameState, district: number): void;
@@ -38,6 +40,7 @@ export function createHud(root: HTMLElement): Hud {
       <div class="hud-item hud-taka"><span class="hud-label">${STRINGS.hud.taka}</span><span class="hud-value" data-k="taka"></span></div>
       <div class="hud-item"><span class="hud-label">${STRINGS.hud.income}</span><span class="hud-value" data-k="income"></span></div>
       <div class="hud-district" data-k="district"></div>
+      <div class="hud-skim" data-k="skim" hidden></div>
     </div>
     <div class="hud-gauges">
       ${gauge('media', STRINGS.hud.media)}
@@ -55,6 +58,7 @@ export function createHud(root: HTMLElement): Hud {
   const taka = el.querySelector<HTMLElement>('[data-k="taka"]')!;
   const income = el.querySelector<HTMLElement>('[data-k="income"]')!;
   const district = el.querySelector<HTMLElement>('[data-k="district"]')!;
+  const skimEl = el.querySelector<HTMLElement>('[data-k="skim"]')!;
   const avatar = el.querySelector<HTMLCanvasElement>('.hud-avatar')!;
   const actx = avatar.getContext('2d')!;
   let avatarKey = '';
@@ -77,7 +81,10 @@ export function createHud(root: HTMLElement): Hud {
       setGauge('media', state.heat.media);
       setGauge('anger', state.heat.anger);
       setGauge('committee', state.heat.committee);
-      setGauge('influence', state.influence);
+      setGauge('influence', effectiveInfluence(state));
+      const skim = totalSkim(state);
+      skimEl.hidden = skim <= 0;
+      skimEl.textContent = fmt(STRINGS.nephews.totalSkim, { pct: `${Math.round(skim * 1000) / 10}%` });
       setGauge('stars', state.stars);
       const key = `${state.seed}|${state.stars}`;
       if (key !== avatarKey) {

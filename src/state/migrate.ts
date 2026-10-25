@@ -1,6 +1,6 @@
 import { BALANCE } from '../config/balance';
 import { BUILDINGS, CATEGORIES, UNLOCK_HOUSING_TIER, type Category } from '../config/buildings';
-import { SAVE_VERSION } from './initialState';
+import { SAVE_VERSION, noNephews } from './initialState';
 import type { GameState } from './types';
 
 type Raw = Record<string, unknown>;
@@ -34,6 +34,31 @@ const MIGRATIONS: Record<number, (data: Raw) => Raw> = {
       stars: 0,
     };
   },
+  // v2 -> v3 (M4): permit jobs, posters, nephews, milestones, the inquiry and the event queue.
+  2: (d) => {
+    const plots = Array.isArray(d.plots) ? (d.plots as Raw[]) : [];
+    let topTier = 0;
+    let count = 0;
+    for (const p of plots) {
+      const b = p.building as Raw | null;
+      if (b && typeof b.tier === 'number') {
+        topTier = Math.max(topTier, b.tier);
+        count += 1;
+      }
+    }
+    const unlocked = Array.isArray(d.unlocked) ? (d.unlocked as string[]) : [];
+    return {
+      ...d,
+      plots: plots.map((p) => ({ ...p, job: null })),
+      posters: [],
+      nephews: noNephews(),
+      milestones: { firstMerge: topTier >= 2, firstInquiry: false, firstTier5: topTier >= 5 || unlocked.includes('retail'), maxBuildings: count },
+      inquiry: null,
+      bachelorsAllowed: false,
+      speedPaid: 0,
+      events: [],
+    };
+  },
 };
 
 const finite = (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v);
@@ -60,7 +85,8 @@ function isPlot(x: unknown, i: number): boolean {
     (p.row === 'front' || p.row === 'back') &&
     typeof p.owned === 'boolean' &&
     typeof p.grabbed === 'boolean' &&
-    isBuilding(p.building)
+    isBuilding(p.building) &&
+    (p.job === null || (typeof p.job === 'object' && typeof (p.job as Raw).kind === 'string' && finite((p.job as Raw).until)))
   );
 }
 
@@ -81,6 +107,15 @@ function isGameState(x: unknown): x is GameState {
     finite(s.rng) && finite(s.nextBagAt) && finite(s.briefcaseUntil) && finite(s.nextBriefcaseAt) && finite(s.boostUntil) &&
     finite(s.influence) && finite(s.stars) &&
     typeof s.heat === 'object' && s.heat !== null &&
+    Array.isArray(s.posters) && s.posters.every(finite) &&
+    typeof s.nephews === 'object' && s.nephews !== null &&
+    ['rony', 'polash', 'mithu', 'dipu'].every((k) => {
+      const n = (s.nephews as Raw)[k] as Raw | undefined;
+      return !!n && typeof n.hired === 'boolean' && Number.isInteger(n.level) && (n.level as number) >= 0 && (n.level as number) <= 5;
+    }) &&
+    typeof s.milestones === 'object' && s.milestones !== null &&
+    (s.inquiry === null || (typeof s.inquiry === 'object' && Number.isInteger((s.inquiry as Raw).plot) && finite((s.inquiry as Raw).until))) &&
+    typeof s.bachelorsAllowed === 'boolean' && finite(s.speedPaid) && Array.isArray(s.events) &&
     (s.bag === null || (typeof s.bag === 'object' && Number.isInteger((s.bag as Raw).plot) && ['bhara', 'tip', 'commission'].includes((s.bag as Raw).kind as string)))
   );
 }

@@ -65,6 +65,38 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 - Traffic was turned down at your request: about 37% of lane capacity at ৳40,000/s. A full jam only appears at extreme late-game income.
 - Save format v2, with migration from v1 (district and slot added, unlocks worked out from your highest house).
 
+## M4: Corruption layer
+
+- [x] Permit waits and speed money formula
+- [x] Three heat meters, inquiries with four resolution options
+- [x] Land grabbing with pond-fill animation
+- [x] Posters with procedural player face; Influence effects
+- [x] Four nephews with skim shown in HUD
+
+### Decisions made in M4
+
+- Permits: build 30 s, upgrade 5 s x tier per level, merge 60 s x target tier, shortened by Permit Bhai Polash. Paid up front. Buildings keep earning while an upgrade or merge waits (your choice); a new build earns nothing until it clears. A merge locks both plots. Merge, build and upgrade animations now play when the stamp lands.
+- Speed money = remaining s x income x 0.5 x (1 - Influence/200), using real income (no briefcase boost, after the nephews' cut), with a ৳500 floor. Each payment is +1 Committee, and the label rotates.
+- Heat: Media -0.5/s, Tenant Anger -0.2/s, Committee -0.1/s. Committee rises +1/s while Media is above 60. Influence cuts all heat gain by up to 30%.
+  - "Doubles Media decay" per poster campaign is read as x(1 + campaigns), so it never goes exponential.
+  - Tenant Anger rises +0.03/s per To-Let Bhaban or bigger (your choice).
+  - Occupancy: housing x (1 - anger/200), everything else x (1 - media/250), clamped 0.5 to 1.
+- Inquiries: one at a time. The talk show can be used once per inquiry. Bags never appear on the frozen building, and speed money cannot rush a frozen building's permit.
+  - It targets a grabbed building first, otherwise your top earner. It freezes that building for 5 min (earns 0, no upgrade or merge).
+  - The committee is held below 100 while it runs and resets to 30 when it ends.
+  - Talk show (30 s of income, halves the remaining time), donation (60 s, ends it, +20 Influence) and brown envelope (120 s, ends it, 25% chance to leak +10 Media) all get the Influence discount.
+  - If the frozen building is merged, the inquiry follows the result.
+- Land grab: free. The plot becomes owned and grabbed (so it counts toward the plot price and the 20-plot back row). 20 s of sand trucks fill the pond, wetland, playground or riverbank before you can build. +15 Media, +5 Committee. A small red flag marks grabbed plots.
+- Influence: posters give +10 while a 10-minute campaign runs (cost 20 s of income). Donation and event Influence fades about 1 per minute (your choice). Total capped at 100. Posters with your face appear on lamp posts and rickshaw backs, and age through rain streaks and torn edges.
+- Nephews:
+  - Hire costs 2 min of income; upgrades cost 3, 6, 12, 24 and 48 min (your choice). Each upgrade improves the effect and lowers the skim. Levels are kept if you fire one, and firing adds +15 Tenant Anger ("Your Khala is upset").
+  - Unlocks: Rony at 5 buildings, Polash at your first merge, Mithu at your first inquiry, Dipu at your first tier 5.
+  - Rony auto-collects bags at 50%+. Dipu's offline cap takes effect with M5's offline earnings.
+  - The total skim is shown next to income in the HUD.
+- Tenant fixes on housing cards: water pump (15 s of housing income, -20 Anger) and allow bachelors (once, -10).
+- Catch-up while the tab is hidden now steps at most 5 s at a time, cut at every permit, inquiry, poster and boost deadline, so heat, inquiries and permits play out in order.
+- Save format v3 (migrates from v2; milestones are worked out from your buildings).
+
 ### Art notes
 
 - Style: **paper cutout**, chosen from the Style Lab on 2026-10-25. Muted craft paper palette, no outlines. Every shape is a cut piece with slightly uneven edges and a soft drop shadow. The sky is flat paper with a torn horizon strip, and a paper grain overlay (CSS, generated once) sits over the canvas.

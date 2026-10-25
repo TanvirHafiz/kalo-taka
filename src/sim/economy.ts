@@ -1,4 +1,4 @@
-import { BALANCE } from '../config/balance';
+import { BALANCE, CORRUPTION, NEPHEWS, type NephewId } from '../config/balance';
 import { BUILDINGS, NEIGHBOUR_RULES, PATIENT_CAPACITY, type Category, type TierDef } from '../config/buildings';
 import type { Building, GameState } from '../state/types';
 import { neighbours, plotById } from './layout';
@@ -11,9 +11,20 @@ export function maxTier(category: Category): number {
   return BUILDINGS[category].length;
 }
 
-/** Occupancy before heat effects. Clamped to the spec range. */
-export function occupancy(_state: GameState, _b: Building): number {
-  return Math.min(BALANCE.maxOccupancy, Math.max(BALANCE.minOccupancy, BALANCE.baseOccupancy));
+/** Occupancy: housing is lowered by Tenant Anger, everything else by Media Heat. Clamped 0.5..1. */
+export function occupancy(state: GameState, b: Building): number {
+  const heat = b.category === 'housing' ? 1 - state.heat.anger / CORRUPTION.angerDiv : 1 - state.heat.media / CORRUPTION.mediaDiv;
+  return Math.min(BALANCE.maxOccupancy, Math.max(BALANCE.minOccupancy, BALANCE.baseOccupancy * heat));
+}
+
+/** Share of all income the hired nephews keep ("shown honestly in the HUD"). */
+export function skimShare(state: GameState): number {
+  let s = 0;
+  for (const id of Object.keys(NEPHEWS) as NephewId[]) {
+    const n = state.nephews[id];
+    if (n.hired) s += Math.max(0, NEPHEWS[id].skim - NEPHEWS[id].skimPerLevel * n.level);
+  }
+  return s;
 }
 
 /** Multipliers from stars, nephews and posters. All 1 until later milestones. */
@@ -61,9 +72,11 @@ export function isBoosted(state: GameState): boolean {
 export function plotIncome(state: GameState, id: number, boosted = isBoosted(state)): number {
   const p = plotById(state, id);
   if (!p?.building) return 0;
+  // frozen by an inquiry: earns nothing until it ends
+  if (state.inquiry?.plot === id) return 0;
   const row = p.row === 'back' ? BALANCE.backRowIncome : 1;
   const boost = boosted ? BALANCE.briefcaseMult : 1;
-  return buildingIncome(state, p.building) * Math.max(0, 1 + neighbourBonus(state, id)) * row * boost;
+  return buildingIncome(state, p.building) * Math.max(0, 1 + neighbourBonus(state, id)) * row * boost * (1 - skimShare(state));
 }
 
 /** Total income per second. Pass `boosted = false` for the underlying rate (unlock thresholds). */

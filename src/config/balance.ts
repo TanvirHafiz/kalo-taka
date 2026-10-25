@@ -50,6 +50,94 @@ export const BALANCE = {
   briefcaseMult: 3,
 } as const;
 
+/** Corruption layer tuning (M4). Times in seconds unless noted. */
+export const CORRUPTION = {
+  /** Permit waits: build tier 1, upgrade per level per tier, merge per target tier. */
+  permitBuild: 30,
+  permitUpgradePerTier: 5,
+  permitMergePerTier: 60,
+  /** speedMoney = remaining s x income/s x this x (1 - influence / influenceDiscountDiv). */
+  speedMoneyFactor: 0.5,
+  influenceDiscountDiv: 200,
+
+  /** Heat meters run 0..100. */
+  heatMax: 100,
+  mediaDecay: 0.5,
+  angerDecay: 0.2,
+  committeeDecay: 0.1,
+  /** Committee rises this much per second while Media Heat is above mediaAlarm. */
+  mediaAlarm: 60,
+  committeeFromMedia: 1,
+  committeeFromSpeedMoney: 1,
+  committeeFromGrab: 5,
+  mediaFromGrab: 15,
+  mediaFromLeak: 10,
+  /** Passive Tenant Anger per second from each big housing block (tier >= angerTier). */
+  angerPerBigHousing: 0.03,
+  angerTier: 4,
+  /** Occupancy: housing x (1 - anger / angerDiv), others x (1 - media / mediaDiv). */
+  angerDiv: 200,
+  mediaDiv: 250,
+  /** Influence cuts heat gain by up to this share at 100 Influence. */
+  influenceHeatCut: 0.3,
+
+  /** Inquiry: freeze length (s), Committee after it starts. */
+  inquiryFreeze: 300,
+  inquiryCommitteeReset: 30,
+  talkShowSeconds: 30,
+  donationSeconds: 60,
+  donationInfluence: 20,
+  envelopeSeconds: 120,
+  envelopeLeakChance: 0.25,
+
+  /** Land grab: pond-fill animation length (s). */
+  grabFill: 20,
+
+  /** Posters: cost in seconds of income, campaign length (s), Influence while active. */
+  posterSeconds: 20,
+  posterLength: 600,
+  posterInfluence: 10,
+  /** Influence from donations and events fades by this much per second (about 1 per minute). */
+  influenceFade: 1 / 60,
+  influenceMax: 100,
+
+  /** Tenant fixes. */
+  waterPumpSeconds: 15,
+  waterPumpAnger: 20,
+  bachelorsAnger: 10,
+  /** Firing a nephew: the family is upset. */
+  fireAnger: 15,
+
+  /** Nephews: hire costs this many seconds of income; upgrades cost these (5 levels). */
+  nephewHireSeconds: 120,
+  nephewUpgradeSeconds: [180, 360, 720, 1440, 2880],
+  /** Floor for every income-scaled price (so nothing is free when income is tiny). */
+  minPrice: 500,
+} as const;
+
+export type NephewId = 'rony' | 'polash' | 'mithu' | 'dipu';
+
+export interface NephewDef {
+  /** Skim at level 0, and how much each upgrade lowers it. */
+  skim: number;
+  skimPerLevel: number;
+  /** Base effect and its gain per level (meaning depends on the nephew). */
+  effect: number;
+  effectPerLevel: number;
+}
+
+/** Nephew effects. Rony: bag value share. Polash: permit wait cut. Mithu: extra Media Heat decay. Dipu: offline cap (hours, M5). */
+export const NEPHEWS: Record<NephewId, NephewDef> = {
+  rony: { skim: 0.03, skimPerLevel: 0.003, effect: 0.5, effectPerLevel: 0.1 },
+  polash: { skim: 0.04, skimPerLevel: 0.004, effect: 0.25, effectPerLevel: 0.05 },
+  mithu: { skim: 0.03, skimPerLevel: 0.003, effect: 0.5, effectPerLevel: 0.2 },
+  dipu: { skim: 0.02, skimPerLevel: 0.002, effect: 8, effectPerLevel: 1 },
+};
+/** Buildings owned at once that unlock Rony. */
+export const RONY_AT_BUILDINGS = 5;
+/** Max nephew upgrade level. */
+export const NEPHEW_MAX_LEVEL = 5;
+
 /** Visual pacing and street-life tuning. Read by render/ (and later by event timing). */
 export const VISUAL = {
   /** One full day and night, in real milliseconds (spec: 6 minutes). */

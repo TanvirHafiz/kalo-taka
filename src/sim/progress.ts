@@ -65,7 +65,8 @@ export function updatePickups(state: GameState, now: number, catchingUp: boolean
   // a bag whose building has gone (merged away) disappears and a new one is scheduled
   if (s.bag && !s.plots.find((p) => p.index === s.bag!.plot)?.building) s = scheduleBag({ ...s, bag: null }, now);
   if (!s.bag && now >= s.nextBagAt) {
-    const built = s.plots.filter((p) => p.building);
+    // never on a building frozen by an inquiry: it would pay nothing
+    const built = s.plots.filter((p) => p.building && s.inquiry?.plot !== p.index);
     if (built.length) {
       const [pv, r1] = rngStep(s.rng);
       const [kv, r2] = rngStep(r1);

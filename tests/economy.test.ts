@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/config/balance';
-import { applyAction } from '../src/sim/actions';
+
 import { buildingIncome, plotCost, totalIncome, upgradeCost, upgradeCostN } from '../src/sim/economy';
-import { fresh, tin, withBuildings } from './helpers';
+import { act, fresh, tin, withBuildings } from './helpers';
 
 describe('income', () => {
   it('level 1 tin shed earns baseIncome x occupancy', () => {
@@ -46,7 +46,7 @@ describe('cost curves', () => {
   it('plotCost = 20000 * 1.35^plotsOwned, starting plot counts', () => {
     const s = fresh();
     expect(plotCost(s)).toBe(Math.ceil(20000 * 1.35));
-    const after = applyAction({ ...s, taka: 1e9 }, { type: 'buyPlot', plot: 1 }).state;
+    const after = act({ ...s, taka: 1e9 }, { type: 'buyPlot', plot: 1 }).state;
     expect(plotCost(after)).toBe(Math.ceil(20000 * 1.35 ** 2));
   });
 });
@@ -59,45 +59,45 @@ describe('actions', () => {
   });
 
   it('build charges baseCost and places a level 1 building', () => {
-    const r = applyAction(fresh(), { type: 'build', plot: 0, category: 'housing' });
+    const r = act(fresh(), { type: 'build', plot: 0, category: 'housing' });
     expect(r.error).toBeUndefined();
     expect(r.state.taka).toBe(50_000 - 2000);
     expect(r.state.plots[0]!.building).toEqual(tin(1));
   });
 
   it('cannot build on an unowned or occupied plot', () => {
-    expect(applyAction(fresh(), { type: 'build', plot: 1, category: 'housing' }).error).toBe('plotNotOwned');
+    expect(act(fresh(), { type: 'build', plot: 1, category: 'housing' }).error).toBe('plotNotOwned');
     const s = withBuildings({ 0: tin(1) });
-    expect(applyAction(s, { type: 'build', plot: 0, category: 'housing' }).error).toBe('plotOccupied');
+    expect(act(s, { type: 'build', plot: 0, category: 'housing' }).error).toBe('plotOccupied');
   });
 
   it('cannot build a category that is not open yet', () => {
-    expect(applyAction(fresh(), { type: 'build', plot: 0, category: 'food' }).error).toBe('notBuildable');
+    expect(act(fresh(), { type: 'build', plot: 0, category: 'food' }).error).toBe('notBuildable');
   });
 
   it('upgrade charges the current level cost and stops at 10', () => {
     const s = withBuildings({ 0: tin(3) }, 100_000);
-    const r = applyAction(s, { type: 'upgrade', plot: 0 });
+    const r = act(s, { type: 'upgrade', plot: 0 });
     expect(r.state.plots[0]!.building!.level).toBe(4);
     expect(r.state.taka).toBe(100_000 - Math.ceil(2000 * 1.18 ** 3));
-    expect(applyAction(withBuildings({ 0: tin(10) }), { type: 'upgrade', plot: 0 }).error).toBe('maxLevel');
+    expect(act(withBuildings({ 0: tin(10) }), { type: 'upgrade', plot: 0 }).error).toBe('maxLevel');
   });
 
   it('refuses when Taka is short and leaves state untouched', () => {
     const s = withBuildings({ 0: tin(1) }, 10);
-    const r = applyAction(s, { type: 'upgrade', plot: 0 });
+    const r = act(s, { type: 'upgrade', plot: 0 });
     expect(r.error).toBe('notEnoughTaka');
     expect(r.state).toBe(s);
   });
 
   it('buying an owned plot is refused', () => {
-    expect(applyAction(fresh(), { type: 'buyPlot', plot: 0 }).error).toBe('plotAlreadyOwned');
+    expect(act(fresh(), { type: 'buyPlot', plot: 0 }).error).toBe('plotAlreadyOwned');
   });
 
   it('applyAction does not mutate its input', () => {
     const s = fresh();
     const snapshot = JSON.stringify(s);
-    applyAction(s, { type: 'build', plot: 0, category: 'housing' });
+    act(s, { type: 'build', plot: 0, category: 'housing' });
     expect(JSON.stringify(s)).toBe(snapshot);
   });
 });

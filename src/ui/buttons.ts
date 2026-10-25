@@ -1,5 +1,5 @@
 // Bottom-right button row: Build, Posters, Nephews, Flee (when available) and Settings.
-// Posters, Nephews and Settings arrive in later milestones and say so when tapped.
+// Settings arrives in a later milestone and says so when tapped.
 import { STRINGS, fmt } from '../config/strings';
 
 export interface ButtonRow {
@@ -14,14 +14,14 @@ const ICON: Record<string, string> = {
   settings: '<circle cx="8" cy="8" r="2.2"/><path d="M8 2v2 M8 12v2 M2 8h2 M12 8h2 M3.8 3.8l1.4 1.4 M10.8 10.8l1.4 1.4 M3.8 12.2l1.4-1.4 M10.8 5.2l1.4-1.4"/>',
 };
 
-export function createButtonRow(root: HTMLElement, onBuild: () => void, toast: (msg: string) => void): ButtonRow {
+export function createButtonRow(root: HTMLElement, handlers: Partial<Record<string, () => void>>, toast: (msg: string) => void): ButtonRow {
   const el = document.createElement('nav');
   el.className = 'button-row';
   el.setAttribute('aria-label', 'Actions');
   const items: [string, string, boolean][] = [
     ['build', STRINGS.buttons.build, true],
-    ['posters', STRINGS.buttons.posters, false],
-    ['nephews', STRINGS.buttons.nephews, false],
+    ['posters', STRINGS.buttons.posters, true],
+    ['nephews', STRINGS.buttons.nephews, true],
     ['flee', STRINGS.buttons.flee, false],
     ['settings', STRINGS.buttons.settings, false],
   ];
@@ -32,7 +32,8 @@ export function createButtonRow(root: HTMLElement, onBuild: () => void, toast: (
   el.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
     if (!btn) return;
-    if (btn.dataset.k === 'build') onBuild();
+    const handler = handlers[btn.dataset.k ?? ''];
+    if (handler) handler();
     else toast(fmt(STRINGS.buttons.later, { name: btn.querySelector('span')!.textContent ?? '' }));
   });
   const flee = el.querySelector<HTMLButtonElement>('[data-k="flee"]')!;

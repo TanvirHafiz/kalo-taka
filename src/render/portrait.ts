@@ -1,7 +1,7 @@
 // The tycoon's procedural paper portrait: round face, moustache, hair (or lack of it), maybe
 // sunglasses, and a sleeveless waistcoat over a panjabi in a party-neutral colour. It greys a
 // little with Offshore Stars. Used in the HUD (and later on posters and the talk show).
-import { circle, ellipse, poly, roundBox, setPaperMode, type Ctx } from '../render/draw';
+import { circle, ellipse, poly, roundBox, setPaperMode, type Ctx } from './draw';
 import { mulberry32 } from '../util/rng';
 
 const SKIN = ['#8d5a3b', '#a8714a', '#c08a5c', '#b07a52'];

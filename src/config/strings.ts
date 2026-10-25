@@ -71,6 +71,81 @@ export const STRINGS = {
     close: 'Close',
   },
 
+  permit: {
+    build: 'Permit: construction',
+    upgrade: 'Permit: renovation',
+    merge: 'Permit: merger',
+    fill: 'Filling the {pond}',
+    waiting: '{label}: {secs}s left',
+    speedLabels: ['Speed Money', 'Tea Money', "Sir's Coffee Fund", 'Processing Fee (unofficial)'],
+    busy: 'The permit office is still stamping this one.',
+  },
+
+  grab: {
+    action: 'Grab it',
+    note: 'Free. Media will talk.',
+    ponds: ['pond', 'wetland', 'playground', 'riverbank'],
+    flag: 'Grabbed',
+  },
+
+  inquiry: {
+    title: 'Anti-Durniti Committee',
+    notice: 'Under inquiry: {secs}s',
+    wait: 'Wait it out',
+    waitNote: 'Free. Earns nothing until it ends.',
+    talkShow: 'TV talk-show appearance',
+    talkShowNote: 'Freeze time halved',
+    donation: 'Donation photo-op',
+    donationNote: 'Freeze lifted, +20 Influence',
+    envelope: 'Brown envelope',
+    envelopeNote: 'Freeze lifted. Might leak.',
+    quotes: [
+      '"I have never seen money in my life. Only cheques."',
+      '"The pond filled itself. Nature is very generous."',
+      '"My nephew is just helping. For free. Mostly."',
+      '"The building was always 9 floors. The permit is shy."',
+      '"Corruption? In this economy? Impossible."',
+    ],
+  },
+
+  tenants: {
+    waterPump: 'Fix the water pump',
+    waterPumpNote: '-20 Tenant Anger',
+    bachelors: 'Allow bachelors',
+    bachelorsNote: '-10 Tenant Anger, once. Neighbours may complain.',
+  },
+
+  posters: {
+    title: 'Posters',
+    intro: 'Your face on every wall, rickshaw and lamp post. Influence +10 while it lasts.',
+    buy: 'New poster campaign',
+    slogan: 'SHOBAR BHAI',
+    active: '{n} campaign(s) running',
+    fades: 'Freshest fades in {mins} min',
+  },
+
+  nephews: {
+    title: 'Nephews',
+    intro: 'Family runs the business. Family also takes a cut.',
+    hire: 'Hire',
+    upgrade: 'Upgrade',
+    fire: 'Fire',
+    hired: 'On payroll',
+    locked: 'Unlocks: {when}',
+    skim: 'Skims {pct}',
+    totalSkim: 'Nephews skim {pct}',
+    names: { rony: 'Rent Collector Rony', polash: 'Permit Bhai Polash', mithu: 'Media Bhagne Mithu', dipu: 'Driver Dipu' },
+    does: {
+      rony: 'Collects cash bags for you at {pct} value',
+      polash: 'Permit waits {pct} shorter',
+      mithu: 'Media Heat fades {pct} faster',
+      dipu: 'Offline earnings cap {hours} h (from the next update)',
+    },
+    unlock: { rony: 'own 5 buildings', polash: 'your first merge', mithu: 'your first inquiry', dipu: 'your first tier 5 building' },
+    maxed: 'Fully trained',
+    level: 'Lv {n}/{max}',
+  },
+
   /** Healthcare: each level is sold as a new test. Index = level. */
   testsByLevel: [
     '',
@@ -108,6 +183,16 @@ export const STRINGS = {
     notBuildable: 'Permit office says this category is not open yet.',
     noPlotsLeft: 'No plots left in this district.',
     nothingToCollect: 'Too late, sir. Someone else took it.',
+    permitPending: 'The permit office is still stamping this one.',
+    frozen: 'Frozen by the committee. Wait, or "resolve" it.',
+    notFrozen: 'No inquiry here, sir.',
+    noPermit: 'Nothing waiting on a permit here.',
+    alreadyDone: 'Already done, sir.',
+    nephewLocked: 'This nephew is not asking for a job yet.',
+    nephewHired: 'Already on the payroll.',
+    nephewNotHired: 'Not on the payroll.',
+    nephewMaxed: 'Fully trained already.',
+    noHousing: 'You have no tenants to fix things for.',
   },
 
   art: {
@@ -142,6 +227,15 @@ export const STRINGS = {
     unlockedCategory: '{name} unlocked. The permit office is suddenly friendly.',
     district: '{name} is open for business. And for grabbing.',
     backRow: 'Back row unlocked. Plots behind plots, sir.',
+    grabbed: 'Trucks are filling the {pond}. Ducks can relocate.',
+    inquiry: 'Anti-Durniti Committee is "discussing" {name}.',
+    inquiryOver: 'Inquiry closed. Nothing was found. As usual.',
+    leaked: 'The envelope leaked to the press. Media Heat up.',
+    poster: 'Posters up. Your face is now on 400 walls.',
+    hired: '{name} joins the company. Salary: a cut of everything.',
+    fired: 'Your Khala is upset. Tenant Anger up.',
+    speedPaid: 'Stamped. The officer says hello.',
+    nephewUnlocked: '{name} is asking for a job, sir.',
   },
 } as const;
 

@@ -178,7 +178,7 @@ export class Traffic {
   }
 
   /** Draw vehicles in world space. `farY`/`nearY` are the lane baselines. */
-  draw(ctx: Ctx, scale: number, viewL: number, viewR: number, farY: number, nearY: number, timeSec: number): void {
+  draw(ctx: Ctx, scale: number, viewL: number, viewR: number, farY: number, nearY: number, timeSec: number, poster: HTMLCanvasElement | null = null): void {
     for (let li = 0; li < 2; li++) {
       const y = li === 0 ? farY : nearY;
       for (const v of this.lanes[li]!) {
@@ -188,6 +188,8 @@ export class Traffic {
           const x = v.s - 200;
           if (x + v.len < viewL || x > viewR) continue;
           ctx.drawImage(sp.canvas, x - PAD, y - SPRITE_H - bob, sp.w, sp.h);
+          // the tycoon's face on the rickshaw's painted back panel during a campaign
+          if (poster && v.kind === 'rickshaw') ctx.drawImage(poster, x + 2, y - 24 - bob, 8, 10.4);
         } else {
           const x = this.laneLength - 200 - v.s - v.len;
           if (x + v.len < viewL || x > viewR) continue;
@@ -196,6 +198,7 @@ export class Traffic {
           ctx.scale(-1, 1);
           ctx.drawImage(sp.canvas, -PAD, y - SPRITE_H - bob, sp.w, sp.h);
           ctx.restore();
+          if (poster && v.kind === 'rickshaw') ctx.drawImage(poster, x + v.len - 10, y - 24 - bob, 8, 10.4);
         }
       }
     }

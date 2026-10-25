@@ -1,7 +1,8 @@
 import { BALANCE } from '../config/balance';
 import type { GameState } from '../state/types';
 import { totalIncome } from './economy';
-import { growWorld, updatePickups } from './progress';
+import { completeDueJobs, maybeEndInquiry, maybeStartInquiry, nextDeadline, ronyCollects, updateHeat, updateMilestones } from './corruption';
+import { growWorld, updatePickups, updateUnlocks } from './progress';
 
 export interface AdvanceResult {
   state: GameState;
@@ -14,7 +15,7 @@ export interface AdvanceResult {
  * Called once per animation frame. The accumulator is the gap between `now` and
  * state.lastSimTime: whole 250 ms ticks are run and lastSimTime advances by exactly
  * tickMs each, so income does not depend on frame rate. A gap longer than maxFrameMs
- * (hidden tab, sleep) is applied in one catch-up step instead.
+ * (hidden tab, sleep) is applied through catchUp() in short steps instead.
  */
 export function advance(state: GameState, now: number): AdvanceResult {
   const gap = now - state.lastSimTime;
@@ -33,28 +34,45 @@ export function advance(state: GameState, now: number): AdvanceResult {
 
 /**
  * Advance the simulation by `dtSec` seconds. Pure; the caller supplies time.
- * `now` is the wall-clock moment the state reaches after this step. The briefcase boost only
- * applies to the part of the step before it runs out, so a long gap never earns 3x throughout.
+ * `now` is the wall-clock moment the state reaches after this step. Order: earn with the state as
+ * it was, then heat, then finish due permits, then inquiries, unlocks, world growth and pickups.
+ * The briefcase boost only applies to the part of the step before it runs out.
  */
 export function tick(state: GameState, dtSec: number, now: number, catchingUp = false): GameState {
   const base = totalIncome(state, false);
   const boostedSec = Math.min(dtSec, Math.max(0, Math.min(now, state.boostUntil) - state.lastSimTime) / 1000);
   const earned = base * dtSec + base * (BALANCE.briefcaseMult - 1) * boostedSec;
-  const next: GameState = {
+  let s: GameState = {
     ...state,
     taka: state.taka + earned,
     lifetimeEarnings: state.lifetimeEarnings + earned,
     lastSimTime: now,
+    posters: state.posters.some((t) => t <= now) ? state.posters.filter((t) => t > now) : state.posters,
   };
-  return updatePickups(growWorld(next), now, catchingUp);
+  s = updateHeat(s, dtSec);
+  s = completeDueJobs(s, now);
+  s = maybeEndInquiry(s, now);
+  s = maybeStartInquiry(s, now);
+  s = updateUnlocks(s);
+  s = growWorld(s);
+  s = updatePickups(s, now, catchingUp);
+  s = ronyCollects(s, now);
+  return updateMilestones(s);
 }
 
+/** Longest single step during catch-up, so heat feedback and inquiries play out over a long gap. */
+const CATCH_UP_STEP_MS = 5000;
+
 /**
- * Apply a long gap (hidden tab) in one step. Income does not change while away (nothing is
- * bought), so one big step equals many small ones apart from the boost, which tick() splits.
+ * Apply a long gap (hidden tab) as a series of short steps, each cut at the next deadline (a permit,
+ * the inquiry, a poster, the boost), so everything happens in the right order.
  */
 export function catchUp(state: GameState, now: number): { state: GameState; earned: number } {
-  const dtSec = Math.max(0, (now - state.lastSimTime) / 1000);
-  const next = tick(state, dtSec, now, true);
-  return { state: next, earned: next.lifetimeEarnings - state.lifetimeEarnings };
+  let s = state;
+  while (s.lastSimTime < now) {
+    const t = s.lastSimTime;
+    const end = Math.min(now, t + CATCH_UP_STEP_MS, nextDeadline(s, t));
+    s = tick(s, (end - t) / 1000, end, true);
+  }
+  return { state: s, earned: s.lifetimeEarnings - state.lifetimeEarnings };
 }

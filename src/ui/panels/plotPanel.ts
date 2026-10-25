@@ -4,7 +4,8 @@ import { BALANCE } from '../../config/balance';
 import { BUILDINGS, CATEGORIES, UNLOCK_HOUSING_TIER } from '../../config/buildings';
 import { STRINGS, errorText, fmt, type ErrorKey } from '../../config/strings';
 import { buildingSeed } from '../../render/buildings/cache';
-import { canBuild, canBuyPlot, canMerge, canUpgrade, upgradePlan } from '../../sim/actions';
+import { canBuild, canBuyPlot, canGrab, canInquiry, canMerge, canSpeedMoney, canUpgrade, upgradePlan } from '../../sim/actions';
+import { inquiryCost, isFrozen, speedMoneyCost, waterPumpCost } from '../../sim/corruption';
 import { buildCost, neighbourBonus, patients, plotCost, plotIncome, tierDef } from '../../sim/economy';
 import { plotById } from '../../sim/layout';
 import { mergeFee, mergePartners } from '../../sim/merge';
@@ -53,7 +54,25 @@ function viewFor(state: GameState, id: number, count: UpgradeCount): View {
       subtitle: back ? STRINGS.plot.backRow : '',
       lines: [],
       showToggle: false,
-      buttons: [{ id: 'buy', label: STRINGS.plot.buyLegally, cost: plotCost(state), error: canBuyPlot(state, id), action: { type: 'buyPlot', plot: id } }],
+      buttons: [
+        { id: 'buy', label: STRINGS.plot.buyLegally, cost: plotCost(state), error: canBuyPlot(state, id), action: { type: 'buyPlot', plot: id } },
+        { id: 'grab', label: STRINGS.grab.action, note: STRINGS.grab.note, error: canGrab(state, id), action: { type: 'grab', plot: id } },
+      ],
+    };
+  }
+  const now = state.lastSimTime;
+  const job = p.job;
+  const secsLeft = job ? Math.max(0, Math.ceil((job.until - now) / 1000)) : 0;
+  const speedLabel = STRINGS.permit.speedLabels[state.speedPaid % STRINGS.permit.speedLabels.length]!;
+  const speedButton = (): ButtonSpec => ({ id: 'speed', label: speedLabel, cost: speedMoneyCost(state, id), error: canSpeedMoney(state, id), action: { type: 'speedMoney', plot: id } });
+  if (!p.building && job) {
+    const fill = job.kind === 'fill';
+    return {
+      title: fmt(STRINGS.plot.emptyTitle, { n }),
+      subtitle: p.grabbed ? STRINGS.grab.flag : back ? STRINGS.plot.backRow : '',
+      lines: [fmt(STRINGS.permit.waiting, { label: fill ? fmt(STRINGS.permit.fill, { pond: STRINGS.grab.ponds[job.pond ?? 0] ?? '' }) : STRINGS.permit.build, secs: secsLeft })],
+      showToggle: false,
+      buttons: fill ? [] : [speedButton()],
     };
   }
   if (!p.building) {
@@ -89,6 +108,31 @@ function viewFor(state: GameState, id: number, count: UpgradeCount): View {
     lines.push(STRINGS.testsByLevel[b.level] ?? '');
   }
   const buttons: ButtonSpec[] = [];
+  if (p.grabbed) lines.push(STRINGS.grab.flag);
+  const frozen = isFrozen(state, id);
+  if (frozen && state.inquiry) {
+    lines.unshift(fmt(STRINGS.inquiry.notice, { secs: Math.ceil((state.inquiry.until - now) / 1000) }));
+    lines.push(`${STRINGS.inquiry.wait}: ${STRINGS.inquiry.waitNote}`);
+    for (const [opt, label, note] of [
+      ['talkShow', STRINGS.inquiry.talkShow, STRINGS.inquiry.talkShowNote],
+      ['donation', STRINGS.inquiry.donation, STRINGS.inquiry.donationNote],
+      ['envelope', STRINGS.inquiry.envelope, STRINGS.inquiry.envelopeNote],
+    ] as const) {
+      buttons.push({ id: `inq-${opt}`, label, note, cost: inquiryCost(state, opt), error: canInquiry(state, opt), action: { type: 'inquiry', option: opt } });
+    }
+  }
+  if (job) {
+    const leadJob = !(job.kind === 'merge' && !job.result);
+    lines.unshift(fmt(STRINGS.permit.waiting, { label: STRINGS.permit[job.kind === 'fill' ? 'build' : job.kind], secs: secsLeft }));
+    if (leadJob) buttons.push(speedButton());
+  }
+  if (b.category === 'housing' && state.heat.anger > 0.5) {
+    buttons.push({ id: 'pump', label: STRINGS.tenants.waterPump, note: STRINGS.tenants.waterPumpNote, cost: waterPumpCost(state), error: state.taka < waterPumpCost(state) ? 'notEnoughTaka' : null, action: { type: 'waterPump' } });
+    if (!state.bachelorsAllowed) buttons.push({ id: 'bachelors', label: STRINGS.tenants.bachelors, note: STRINGS.tenants.bachelorsNote, error: null, action: { type: 'bachelors' } });
+  }
+  if (job || frozen) {
+    return { title: tierDef(b.category, b.tier)?.name ?? '?', subtitle: buildingName(buildingSeed(state.seed, id, b), b.category), lines, showToggle: false, buttons };
+  }
   if (b.level >= BALANCE.maxLevel) {
     buttons.push({ id: 'upgrade', label: fmt(STRINGS.plot.maxLevel, { max: BALANCE.maxLevel }), error: 'maxLevel', action: { type: 'upgrade', plot: id } });
   } else {
@@ -101,7 +145,7 @@ function viewFor(state: GameState, id: number, count: UpgradeCount): View {
       action: { type: 'upgrade', plot: id, count },
     });
   }
-  const partners = mergePartners(state, id);
+  const partners = mergePartners(state, id).filter((o) => !plotById(state, o)?.job && !isFrozen(state, o));
   for (const other of partners) {
     const o = plotById(state, other)!;
     buttons.push({ id: `merge-${other}`, label: fmt(STRINGS.plot.merge, { n: o.slot + 1 }), cost: mergeFee(b), error: canMerge(state, id, other), action: { type: 'merge', a: id, b: other } });

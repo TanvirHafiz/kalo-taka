@@ -1,7 +1,11 @@
-import { BALANCE } from '../config/balance';
+import { BALANCE, CORRUPTION, NEPHEW_MAX_LEVEL } from '../config/balance';
 import type { Category } from '../config/buildings';
 import type { ErrorKey } from '../config/strings';
 import type { Action, ActionResult, Building, GameState, Plot, UpgradeCount } from '../state/types';
+import {
+  addHeat, completeJob, endInquiry, inquiryCost, isFrozen, newJob, nephewHireCost, nephewTrainCost, nephewUnlocked,
+  permitSeconds, posterCost, rollLeak, speedMoneyCost, waterPumpCost,
+} from './corruption';
 import { buildCost, plotCost, plotIncome, upgradeCost } from './economy';
 import { leftOf, plotById } from './layout';
 import { mergeBlocker, mergeFee } from './merge';
@@ -18,10 +22,18 @@ export function canBuyPlot(state: GameState, plot: number): ErrorKey | null {
   return null;
 }
 
+export function canGrab(state: GameState, plot: number): ErrorKey | null {
+  const p = plotById(state, plot);
+  if (!p) return 'noSuchPlot';
+  if (p.owned) return 'plotAlreadyOwned';
+  return null;
+}
+
 export function canBuild(state: GameState, plot: number, category: Category): ErrorKey | null {
   const p = plotById(state, plot);
   if (!p) return 'noSuchPlot';
   if (!p.owned) return 'plotNotOwned';
+  if (p.job) return 'permitPending';
   if (p.building) return 'plotOccupied';
   if (!state.unlocked.includes(category)) return 'notBuildable';
   if (state.taka < buildCost(category)) return 'notEnoughTaka';
@@ -57,6 +69,8 @@ export function canUpgrade(state: GameState, plot: number, count: UpgradeCount =
   const p = plotById(state, plot);
   if (!p) return 'noSuchPlot';
   if (!p.building) return 'plotEmpty';
+  if (p.job) return 'permitPending';
+  if (isFrozen(state, plot)) return 'frozen';
   if (p.building.level >= BALANCE.maxLevel) return 'maxLevel';
   if (state.taka < upgradePlan(state, plot, count).cost) return 'notEnoughTaka';
   return null;
@@ -65,8 +79,25 @@ export function canUpgrade(state: GameState, plot: number, count: UpgradeCount =
 export function canMerge(state: GameState, a: number, b: number): ErrorKey | null {
   const blocker = mergeBlocker(state, a, b);
   if (blocker) return blocker;
+  if (plotById(state, a)?.job || plotById(state, b)?.job) return 'permitPending';
+  if (isFrozen(state, a) || isFrozen(state, b)) return 'frozen';
   const building = plotById(state, a)?.building;
   if (building && state.taka < mergeFee(building)) return 'notEnoughTaka';
+  return null;
+}
+
+export function canSpeedMoney(state: GameState, plot: number): ErrorKey | null {
+  const job = plotById(state, plot)?.job;
+  if (!job || job.kind === 'fill' || (job.kind === 'merge' && !job.result)) return 'noPermit';
+  if (isFrozen(state, plot)) return 'frozen';
+  if (state.taka < speedMoneyCost(state, plot)) return 'notEnoughTaka';
+  return null;
+}
+
+export function canInquiry(state: GameState, option: 'talkShow' | 'donation' | 'envelope'): ErrorKey | null {
+  if (!state.inquiry) return 'notFrozen';
+  if (option === 'talkShow' && state.inquiry.talked) return 'alreadyDone';
+  if (state.taka < inquiryCost(state, option)) return 'notEnoughTaka';
   return null;
 }
 
@@ -74,6 +105,8 @@ function withPlot(state: GameState, index: number, patch: Partial<Plot>, takaDel
   const plots = state.plots.map((p) => (p.index === index ? { ...p, ...patch } : p));
   return { ...state, plots, taka: state.taka + takaDelta };
 }
+
+const pay = (state: GameState, cost: number): GameState => ({ ...state, taka: state.taka - cost });
 
 /** Single entry point for player actions. Pure: returns a new state, or the same state plus an error. */
 export function applyAction(state: GameState, action: Action): ActionResult {
@@ -84,11 +117,20 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       if (error) return { state, error };
       return { state: growWorld(withPlot(state, action.plot, { owned: true }, -plotCost(state))) };
     }
+    case 'grab': {
+      const error = canGrab(state, action.plot);
+      if (error) return { state, error };
+      const pond = Math.floor((plotById(state, action.plot)!.index * 7 + state.speedPaid) % 4);
+      let s = withPlot(state, action.plot, { owned: true, grabbed: true, job: newJob('fill', now, CORRUPTION.grabFill, { pond }) }, 0);
+      s = addHeat(s, CORRUPTION.mediaFromGrab, 0, CORRUPTION.committeeFromGrab);
+      return { state: growWorld(s) };
+    }
     case 'build': {
       const error = canBuild(state, action.plot, action.category);
       if (error) return { state, error };
-      const building: Building = { category: action.category, tier: 1, level: 1 };
-      return { state: withPlot(state, action.plot, { building }, -buildCost(action.category)) };
+      const result: Building = { category: action.category, tier: 1, level: 1 };
+      const job = newJob('build', now, permitSeconds(state, 'build', 1), { result });
+      return { state: withPlot(state, action.plot, { job }, -buildCost(action.category)) };
     }
     case 'upgrade': {
       const count = action.count ?? 1;
@@ -96,7 +138,8 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       if (error) return { state, error };
       const b = plotById(state, action.plot)!.building!;
       const plan = upgradePlan(state, action.plot, count);
-      return { state: withPlot(state, action.plot, { building: { ...b, level: b.level + plan.levels } }, -plan.cost) };
+      const job = newJob('upgrade', now, permitSeconds(state, 'upgrade', b.tier, plan.levels), { levels: plan.levels });
+      return { state: withPlot(state, action.plot, { job }, -plan.cost) };
     }
     case 'merge': {
       const left = leftOf(state, action.a, action.b);
@@ -104,21 +147,81 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       const error = canMerge(state, left, right);
       if (error) return { state, error };
       const b = plotById(state, left)!.building!;
-      const fee = mergeFee(b);
-      const merged: Building = { category: b.category, tier: b.tier + 1, level: 1 };
-      const plots = state.plots.map((p) => {
-        if (p.index === left) return { ...p, building: merged };
-        if (p.index === right) return { ...p, building: null };
-        return p;
-      });
-      let next: GameState = { ...state, plots, taka: state.taka - fee };
-      if (next.bag?.plot === right) next = scheduleBag({ ...next, bag: null }, now);
-      return { state: updateUnlocks(next) };
+      const result: Building = { category: b.category, tier: b.tier + 1, level: 1 };
+      const secs = permitSeconds(state, 'merge', result.tier);
+      const lead = newJob('merge', now, secs, { result, partner: right });
+      const lock = newJob('merge', now, secs, { partner: left });
+      const plots = state.plots.map((p) => (p.index === left ? { ...p, job: lead } : p.index === right ? { ...p, job: lock } : p));
+      return { state: { ...state, plots, taka: state.taka - mergeFee(b) } };
+    }
+    case 'speedMoney': {
+      const error = canSpeedMoney(state, action.plot);
+      if (error) return { state, error };
+      let s = pay(state, speedMoneyCost(state, action.plot));
+      s = addHeat({ ...s, speedPaid: s.speedPaid + 1 }, 0, 0, CORRUPTION.committeeFromSpeedMoney);
+      s = completeJob(s, action.plot);
+      return { state: updateUnlocks(s) };
+    }
+    case 'inquiry': {
+      const error = canInquiry(state, action.option);
+      if (error) return { state, error };
+      let s = pay(state, inquiryCost(state, action.option));
+      if (action.option === 'talkShow') {
+        const inq = s.inquiry!;
+        s = { ...s, inquiry: { ...inq, until: now + Math.max(0, inq.until - now) / 2, talked: true } };
+      } else if (action.option === 'donation') {
+        s = endInquiry({ ...s, influence: Math.min(CORRUPTION.influenceMax, s.influence + CORRUPTION.donationInfluence) });
+      } else {
+        s = endInquiry(s);
+        const [leaked, next] = rollLeak(s);
+        s = next;
+        if (leaked) s = { ...addHeat(s, CORRUPTION.mediaFromLeak, 0, 0), events: [...s.events, { kind: 'leak' }] };
+      }
+      return { state: s };
+    }
+    case 'poster': {
+      const cost = posterCost(state);
+      if (state.taka < cost) return { state, error: 'notEnoughTaka' };
+      const live = state.posters.filter((t) => t > now);
+      return { state: { ...pay(state, cost), posters: [...live, now + CORRUPTION.posterLength * 1000] } };
+    }
+    case 'hire': {
+      const n = state.nephews[action.id];
+      if (!nephewUnlocked(state, action.id)) return { state, error: 'nephewLocked' };
+      if (n.hired) return { state, error: 'nephewHired' };
+      const cost = nephewHireCost(state);
+      if (state.taka < cost) return { state, error: 'notEnoughTaka' };
+      return { state: { ...pay(state, cost), nephews: { ...state.nephews, [action.id]: { ...n, hired: true } } } };
+    }
+    case 'trainNephew': {
+      const n = state.nephews[action.id];
+      if (!n.hired) return { state, error: 'nephewNotHired' };
+      if (n.level >= NEPHEW_MAX_LEVEL) return { state, error: 'nephewMaxed' };
+      const cost = nephewTrainCost(state, action.id);
+      if (state.taka < cost) return { state, error: 'notEnoughTaka' };
+      return { state: { ...pay(state, cost), nephews: { ...state.nephews, [action.id]: { ...n, level: n.level + 1 } } } };
+    }
+    case 'fire': {
+      const n = state.nephews[action.id];
+      if (!n.hired) return { state, error: 'nephewNotHired' };
+      const s = { ...state, nephews: { ...state.nephews, [action.id]: { ...n, hired: false } } };
+      return { state: addHeat(s, 0, CORRUPTION.fireAnger, 0) };
+    }
+    case 'waterPump': {
+      if (!state.plots.some((p) => p.building?.category === 'housing')) return { state, error: 'noHousing' };
+      const cost = waterPumpCost(state);
+      if (state.taka < cost) return { state, error: 'notEnoughTaka' };
+      const s = pay(state, cost);
+      return { state: { ...s, heat: { ...s.heat, anger: Math.max(0, s.heat.anger - CORRUPTION.waterPumpAnger) } } };
+    }
+    case 'bachelors': {
+      if (state.bachelorsAllowed) return { state, error: 'alreadyDone' };
+      return { state: { ...state, bachelorsAllowed: true, heat: { ...state.heat, anger: Math.max(0, state.heat.anger - CORRUPTION.bachelorsAnger) } } };
     }
     case 'collectBag': {
       if (!state.bag) return { state, error: 'nothingToCollect' };
-      const pay = plotIncome(state, state.bag.plot) * BALANCE.bagSeconds;
-      const next = { ...state, bag: null, taka: state.taka + pay, lifetimeEarnings: state.lifetimeEarnings + pay };
+      const got = plotIncome(state, state.bag.plot) * BALANCE.bagSeconds;
+      const next = { ...state, bag: null, taka: state.taka + got, lifetimeEarnings: state.lifetimeEarnings + got };
       return { state: scheduleBag(next, now) };
     }
     case 'collectBriefcase': {

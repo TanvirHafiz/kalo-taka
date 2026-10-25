@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction } from '../src/sim/actions';
+
 import { mergeBlocker, mergeFee, mergePartners } from '../src/sim/merge';
-import { tin, withBuildings } from './helpers';
+import { act, tin, withBuildings } from './helpers';
 
 describe('merge rules', () => {
   it('two adjacent maxed same-tier buildings merge into next tier level 1 on the left plot', () => {
     const s = withBuildings({ 3: tin(10), 4: tin(10) });
-    const r = applyAction(s, { type: 'merge', a: 4, b: 3 });
+    const r = act(s, { type: 'merge', a: 4, b: 3 });
     expect(r.error).toBeUndefined();
     expect(r.state.plots[3]!.building).toEqual({ category: 'housing', tier: 2, level: 1 });
     expect(r.state.plots[4]!.building).toBeNull();
@@ -16,13 +16,13 @@ describe('merge rules', () => {
   it('fee is 2x the target tier baseCost', () => {
     expect(mergeFee(tin(10))).toBe(2 * 8000);
     const s = withBuildings({ 0: tin(10), 1: tin(10) }, 100_000);
-    expect(applyAction(s, { type: 'merge', a: 0, b: 1 }).state.taka).toBe(100_000 - 16_000);
+    expect(act(s, { type: 'merge', a: 0, b: 1 }).state.taka).toBe(100_000 - 16_000);
   });
 
   it('freed right plot keeps its grabbed flag', () => {
     const base = withBuildings({ 0: tin(10), 1: tin(10) });
     const s = { ...base, plots: base.plots.map((p) => (p.index === 1 ? { ...p, grabbed: true } : p)) };
-    const r = applyAction(s, { type: 'merge', a: 0, b: 1 });
+    const r = act(s, { type: 'merge', a: 0, b: 1 });
     expect(r.state.plots[1]!.grabbed).toBe(true);
     expect(r.state.plots[0]!.grabbed).toBe(false);
   });
@@ -57,13 +57,13 @@ describe('merge rules', () => {
 
   it('tier 3 merges into tier 4', () => {
     const t3 = { category: 'housing' as const, tier: 3, level: 10 };
-    const r = applyAction(withBuildings({ 0: t3, 1: t3 }), { type: 'merge', a: 0, b: 1 });
+    const r = act(withBuildings({ 0: t3, 1: t3 }), { type: 'merge', a: 0, b: 1 });
     expect(r.state.plots[0]!.building!.tier).toBe(4);
   });
 
   it('refuses when the fee is not affordable', () => {
     const s = withBuildings({ 0: tin(10), 1: tin(10) }, 1000);
-    expect(applyAction(s, { type: 'merge', a: 0, b: 1 }).error).toBe('notEnoughTaka');
+    expect(act(s, { type: 'merge', a: 0, b: 1 }).error).toBe('notEnoughTaka');
   });
 
   it('rows must match', () => {

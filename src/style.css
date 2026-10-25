@@ -175,6 +175,33 @@ html, body {
 }
 .panel-buttons button:disabled .btn-cost { background: rgba(70, 42, 16, 0.08); }
 
+/* ---- Sheets (Posters, Nephews) ---- */
+.sheet-intro { margin: 0 0 10px; font-size: 14px; color: var(--muted); font-weight: 600; }
+.sheet-rows { display: grid; gap: 8px; max-height: 52vh; overflow-y: auto; }
+.sheet-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  padding: 8px 10px; border-radius: 12px; background: var(--paper-2);
+}
+.sheet-row.dim { opacity: 0.6; }
+.sheet-row-title { font-weight: 800; font-size: 16px; line-height: 1.2; }
+.sheet-row-lines { font-size: 13px; color: var(--muted); font-weight: 600; }
+.sheet-row-buttons { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.sheet-row-buttons button {
+  display: flex; flex-direction: column; align-items: center; min-height: 44px; padding: 4px 12px;
+  font-family: var(--font); font-size: 14px; font-weight: 800; line-height: 1.1;
+  background: var(--ok); color: #fffaf0; border: none; border-radius: 10px; cursor: pointer;
+  box-shadow: 0 2px 0 rgba(40, 60, 45, 0.5), 0 3px 6px var(--shadow);
+}
+.sheet-row-buttons button .btn-cost { font-size: 12px; background: none; padding: 0; }
+.sheet-row-buttons button.quiet { background: var(--paper); color: var(--accent); box-shadow: 0 1px 2px var(--shadow); }
+.sheet-row-buttons button:disabled { background: var(--kraft); color: var(--muted); cursor: not-allowed; box-shadow: none; }
+.sheet-row-buttons button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.hud-skim {
+  align-self: center; padding: 2px 8px; border-radius: 8px; white-space: nowrap;
+  background: #f6d7cf; color: var(--accent); font-weight: 800; font-size: 12px;
+}
+.hud-skim[hidden] { display: none; }
+
 /* ---- Toasts ---- */
 .toasts {
   position: absolute;

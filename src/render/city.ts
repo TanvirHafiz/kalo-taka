@@ -6,7 +6,8 @@ import { STRINGS, fmt } from '../config/strings';
 import { dayPhase } from '../sim/daycycle';
 import { neighbourBonus, patients, plotCost, totalIncome } from '../sim/economy';
 import { districtCount, plotById } from '../sim/layout';
-import type { GameState, Plot } from '../state/types';
+import { CORRUPTION } from '../config/balance';
+import type { GameState, Job, Plot } from '../state/types';
 import { formatRate, formatTaka } from '../util/money';
 import { hashSeed, mulberry32 } from '../util/rng';
 import { getSprite, spriteLights, spriteScale, type Sprite } from './buildings/cache';
@@ -15,6 +16,7 @@ import { ZOOM_MAX, ZOOM_MIN, screenToWorldX, type Camera } from './camera';
 import { skyStyle } from './districts';
 import { box, circle, ellipse, fitText, line, paperShape, poly, range, roundBox, setPaperMode, type Ctx } from './draw';
 import { Effects, type PlotFx } from './effects';
+import { drawFill, drawGrabFlag, drawInquiry, drawPermitBar, drawPoster, drawScaffold, posterImage } from './corruptionArt';
 import { drawTint, lightingAt } from './lighting';
 import { GOLD, GROUND, GROUND_DARK, INK, LEAF, LEAF_DARK } from './palette';
 import { People } from './people';
@@ -270,6 +272,7 @@ export class CityRenderer {
   frame(ctx: Ctx, state: GameState, cam: Camera, selected: number | null, dpr: number, nowMs: number, timeSec: number): void {
     // clamp the step: a tab coming back from the background must not teleport the traffic
     const dt = this.lastNow ? Math.min(0.05, Math.max(0, (nowMs - this.lastNow) / 1000)) : 0;
+    const simNow = state.lastSimTime;
     this.lastNow = nowMs;
     const light = lightingAt(dayPhase(nowMs));
     const gy = groundScreenY(cam);
@@ -348,9 +351,25 @@ export class CityRenderer {
         c.save();
         rowTransform(c, p);
         if (!p.owned) drawUnowned(c, p, state.seed, price);
+        else if (p.job?.kind === 'fill') drawFill(c, plotCenter(p), jobProgress(p.job), p.job.pond ?? 0, timeSec);
+        else if (p.job?.kind === 'build') drawScaffold(c, plotCenter(p), 92);
         else drawEmptyLot(c, p, state.seed);
+        if (p.grabbed) drawGrabFlag(c, plotCenter(p) - PLOT_W / 2 + 6);
         c.restore();
       }
+    };
+    const jobProgress = (job: Job) => Math.min(1, Math.max(0, (simNow - job.start) / Math.max(1, job.until - job.start)));
+    const campaigns = [...state.posters].filter((t) => t > simNow).sort((a, b) => b - a);
+    const poster = campaigns.length ? posterImage(state.seed, state.stars, STRINGS.posters.slogan) : null;
+    const posterAge = (end: number) => 1 - (end - simNow) / (CORRUPTION.posterLength * 1000);
+    const posters = (c: Ctx) => {
+      if (!poster) return;
+      poles.forEach((x, i) => {
+        if (x < viewL || x > viewR) return;
+        const end = campaigns[i % campaigns.length]!;
+        drawPoster(c, poster, x - 9, -98, 18, posterAge(end), ((i * 37) % 9 - 4) * 0.02);
+        if (campaigns.length > 1) drawPoster(c, poster, x - 8, -66, 16, posterAge(campaigns[(i + 1) % campaigns.length]!), ((i * 53) % 7 - 3) * 0.03);
+      });
     };
     const trees = (c: Ctx) => {
       for (let d = 0; d < nDistricts; d++) {
@@ -381,8 +400,9 @@ export class CityRenderer {
         return b ? getSprite(state.seed, i, b, scale).height : 60;
       });
       drawPoles(c, poles, state.seed);
+      posters(c);
       this.people.draw(c, viewL, viewR);
-      this.traffic.draw(c, scale, viewL, viewR, farY, nearY, timeSec);
+      this.traffic.draw(c, scale, viewL, viewR, farY, nearY, timeSec, poster);
     };
 
     ctx.save();
@@ -446,6 +466,25 @@ export class CityRenderer {
     for (const { p, b, s } of shown) {
       const cx = plotCenter(p);
       if (b && p.row === 'front') levelBadge(ctx, cx, b.level);
+      // permits, land fills and inquiries
+      const job = p.job;
+      const lead = job && !(job.kind === 'merge' && !job.result);
+      const k = p.row === 'back' ? BACK_SCALE : 1;
+      const baseY = p.row === 'back' ? BACK_Y : 0;
+      const topY = baseY - (s ? s.height : job?.kind === 'build' ? 92 : 60) * k;
+      if (job && lead) {
+        const secs = Math.max(0, (job.until - simNow) / 1000);
+        const label = job.kind === 'fill'
+          ? fmt(STRINGS.permit.fill, { pond: STRINGS.grab.ponds[job.pond ?? 0] ?? '' })
+          : STRINGS.permit[job.kind];
+        drawPermitBar(ctx, cx, topY - 8, jobProgress(job), secs, label);
+      }
+      if (state.inquiry?.plot === p.index && s) {
+        ctx.save();
+        rowTransform(ctx, p);
+        drawInquiry(ctx, cx, s.height, Math.max(0, (state.inquiry.until - simNow) / 1000), STRINGS.inquiry.title);
+        ctx.restore();
+      }
       if (b && s) {
         const k = p.row === 'back' ? BACK_SCALE : 1;
         const top = (p.row === 'back' ? BACK_Y : 0) - s.height * k;

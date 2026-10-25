@@ -10,7 +10,8 @@ import { CityRenderer, fitZoom, maxPanY, plotCenter, worldWidth } from './render
 import { clearSceneCache } from './render/scene';
 import { DISTRICTS } from './config/buildings';
 import { applyAction, bagValue } from './sim/actions';
-import { districtCount, hasBackRow, leftOf, plotById } from './sim/layout';
+import { NEPHEW_IDS, nephewUnlocked } from './sim/corruption';
+import { districtCount, hasBackRow, plotById } from './sim/layout';
 import { tierDef } from './sim/economy';
 import { advance } from './sim/tick';
 import { createInitialState } from './state/initialState';
@@ -19,7 +20,9 @@ import type { Action, GameState } from './state/types';
 import { addGrain } from './ui/grain';
 import { createButtonRow } from './ui/buttons';
 import { createHud } from './ui/hud';
+import { nephewsView, postersView } from './ui/panels/corruptionSheets';
 import { createPlotPanel } from './ui/panels/plotPanel';
+import { createSheet } from './ui/panels/sheet';
 import { initToasts, showToast } from './ui/toasts';
 import { formatTaka } from './util/money';
 import { randomSeed } from './util/rng';
@@ -60,12 +63,44 @@ function save(): void {
 
 /** Toasts for things that open up: categories, districts, the back row. */
 function announce(before: GameState, after: GameState): void {
+  for (const id of NEPHEW_IDS) {
+    if (!knownNephews.has(id) && nephewUnlocked(after, id)) {
+      knownNephews.add(id);
+      showToast(fmt(STRINGS.toasts.nephewUnlocked, { name: STRINGS.nephews.names[id] }));
+    }
+  }
   for (const c of after.unlocked) {
     if (!before.unlocked.includes(c)) showToast(fmt(STRINGS.toasts.unlockedCategory, { name: STRINGS.categories[c] }));
   }
   for (let d = districtCount(before); d < districtCount(after); d++) showToast(fmt(STRINGS.toasts.district, { name: DISTRICTS[d]?.name ?? '' }));
   if (!hasBackRow(before) && hasBackRow(after)) showToast(STRINGS.toasts.backRow);
 }
+
+/** Play what the sim reported (permits clearing, inquiries, leaks) and empty the queue. */
+function drainEvents(): void {
+  if (!state.events.length) return;
+  const now = Date.now();
+  for (const e of state.events) {
+    if (e.kind === 'built') {
+      city.effects.build(e.plot, now);
+      const b = plotById(state, e.plot)?.building;
+      if (b) showToast(fmt(STRINGS.toasts.built, { name: tierDef(b.category, b.tier)?.name ?? '' }));
+    } else if (e.kind === 'upgraded') city.effects.upgrade(e.plot, now);
+    else if (e.kind === 'merged') {
+      city.effects.merge(e.left, e.right, e.oldLeft, e.oldRight, now);
+      const b = plotById(state, e.left)?.building;
+      if (b) showToast(fmt(STRINGS.toasts.merged, { name: tierDef(b.category, b.tier)?.name ?? '' }));
+    } else if (e.kind === 'inquiry') {
+      const b = plotById(state, e.plot)?.building;
+      showToast(fmt(STRINGS.toasts.inquiry, { name: b ? (tierDef(b.category, b.tier)?.name ?? '') : '' }));
+    } else if (e.kind === 'inquiryOver') showToast(STRINGS.toasts.inquiryOver);
+    else if (e.kind === 'leak') showToast(STRINGS.toasts.leaked);
+  }
+  state = { ...state, events: [] };
+}
+
+/** Nephews already asking for a job, so each one is announced once. */
+const knownNephews = new Set(NEPHEW_IDS.filter((id) => nephewUnlocked(state, id)));
 
 function dispatch(action: Action): void {
   // snapshot first: after a merge the right plot is empty, but the animation needs both buildings
@@ -77,20 +112,16 @@ function dispatch(action: Action): void {
     return;
   }
   state = result.state;
-  const now = Date.now();
-  if (action.type === 'merge') {
-    const l = leftOf(before, action.a, action.b), r = l === action.a ? action.b : action.a;
-    const oldL = plotById(before, l)?.building, oldR = plotById(before, r)?.building;
-    if (oldL && oldR) city.effects.merge(l, r, oldL, oldR, now);
-    const b = plotById(state, l)?.building;
-    if (b) showToast(fmt(STRINGS.toasts.merged, { name: tierDef(b.category, b.tier)?.name ?? '' }));
-  } else if (action.type === 'build') {
-    city.effects.build(action.plot, now);
-    const b = plotById(state, action.plot)?.building;
-    if (b) showToast(fmt(STRINGS.toasts.built, { name: tierDef(b.category, b.tier)?.name ?? '' }));
-  } else if (action.type === 'upgrade') city.effects.upgrade(action.plot, now);
-  else if (action.type === 'collectBag' && bag) showToast(fmt(STRINGS.bags.collected, { kind: STRINGS.bags[bag.kind], amount: formatTaka(bag.value) }));
+  if (action.type === 'collectBag' && bag) showToast(fmt(STRINGS.bags.collected, { kind: STRINGS.bags[bag.kind], amount: formatTaka(bag.value) }));
   else if (action.type === 'collectBriefcase') showToast(STRINGS.toasts.briefcase);
+  else if (action.type === 'speedMoney') showToast(STRINGS.toasts.speedPaid);
+  else if (action.type === 'grab') {
+    const pond = plotById(state, action.plot)?.job?.pond ?? 0;
+    showToast(fmt(STRINGS.toasts.grabbed, { pond: STRINGS.grab.ponds[pond] ?? '' }));
+  } else if (action.type === 'poster') showToast(STRINGS.toasts.poster);
+  else if (action.type === 'hire') showToast(fmt(STRINGS.toasts.hired, { name: STRINGS.nephews.names[action.id] }));
+  else if (action.type === 'fire') showToast(STRINGS.toasts.fired);
+  drainEvents();
   announce(before, state);
   panel.update(state);
   hud.update(state, city.districtInView(state, cam));
@@ -102,7 +133,7 @@ function openBuild(): void {
   const target = sel && sel.owned && !sel.building
     ? sel
     : [...state.plots]
-        .filter((p) => p.owned && !p.building)
+        .filter((p) => p.owned && !p.building && !p.job)
         .sort((a, b) => a.district - b.district || (a.row === b.row ? 0 : a.row === 'front' ? -1 : 1) || a.slot - b.slot)[0];
   if (!target) {
     showToast(STRINGS.build.noEmptyPlot);
@@ -113,7 +144,24 @@ function openBuild(): void {
   panel.open(target.index);
   panel.update(state);
 }
-createButtonRow(overlay, openBuild, showToast);
+const postersSheet = createSheet(overlay, postersView, dispatch, () => closeAll());
+const nephewsSheet = createSheet(overlay, nephewsView, dispatch, () => closeAll());
+function closeAll(): void {
+  panel.close();
+  postersSheet.close();
+  nephewsSheet.close();
+}
+createButtonRow(overlay, {
+  build: openBuild,
+  posters: () => {
+    postersSheet.open();
+    postersSheet.update(state);
+  },
+  nephews: () => {
+    nephewsSheet.open();
+    nephewsSheet.update(state);
+  },
+}, showToast);
 
 // --- Resize and DPR --------------------------------------------------------
 let dpr = 1;
@@ -208,6 +256,8 @@ function endPointer(e: PointerEvent, tap: boolean): void {
   else if (hit.kind === 'bag') dispatch({ type: 'collectBag' });
   else if (hit.kind === 'briefcase') dispatch({ type: 'collectBriefcase' });
   else {
+    postersSheet.close();
+    nephewsSheet.close();
     panel.open(hit.plot);
     panel.update(state);
   }
@@ -226,7 +276,7 @@ canvas.addEventListener('wheel', (e) => {
   }
 }, { passive: false });
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') panel.close();
+  if (e.key === 'Escape') closeAll();
 });
 
 // --- Loop ------------------------------------------------------------------
@@ -237,7 +287,10 @@ function frame(): void {
   const before = state;
   const r = advance(state, now);
   state = r.state;
-  if (state !== before) announce(before, state);
+  if (state !== before) {
+    drainEvents();
+    announce(before, state);
+  }
   clampCamera(cam, worldWidth(state));
   if (r.caughtUpMs >= BALANCE.catchUpToastMinMs && r.caughtUp > 0) {
     showToast(fmt(STRINGS.toasts.welcomeBack, { amount: formatTaka(r.caughtUp) }));
@@ -246,6 +299,8 @@ function frame(): void {
     lastUiUpdate = now;
     hud.update(state, city.districtInView(state, cam));
     panel.update(state);
+    postersSheet.update(state);
+    nephewsSheet.update(state);
   }
   city.frame(ctx, state, cam, panel.selected, dpr, now, (performance.now() - bootTime) / 1000);
   requestAnimationFrame(frame);

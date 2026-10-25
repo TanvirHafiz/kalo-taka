@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/config/balance';
 import { DISTRICTS } from '../src/config/buildings';
 import { NAME_BLOCKLIST } from '../src/config/strings';
-import { applyAction, upgradePlan } from '../src/sim/actions';
+import { upgradePlan } from '../src/sim/actions';
 import { buildingIncome, neighbourBonus, plotIncome, totalIncome, upgradeCost } from '../src/sim/economy';
 import { districtCount, hasBackRow, neighbours } from '../src/sim/layout';
 import { mergeBlocker } from '../src/sim/merge';
@@ -12,7 +12,7 @@ import { createInitialState, districtRow } from '../src/state/initialState';
 import { migrate } from '../src/state/migrate';
 import type { Building, GameState } from '../src/state/types';
 import { buildingName } from '../src/util/names';
-import { T0 } from './helpers';
+import { T0, act } from './helpers';
 
 const b = (category: Building['category'], tier: number, level = 1): Building => ({ category, tier, level });
 
@@ -80,7 +80,7 @@ describe('layout', () => {
     let s = world(1, true);
     s = place(s, [[0, 'back', 4, b('housing', 1, 10)], [0, 'back', 5, b('housing', 1, 10)]]);
     const right = id(s, 0, 'back', 5), left = id(s, 0, 'back', 4);
-    const r = applyAction(s, { type: 'merge', a: right, b: left });
+    const r = act(s, { type: 'merge', a: right, b: left });
     expect(r.error).toBeUndefined();
     expect(r.state.plots.find((p) => p.index === left)!.building!.tier).toBe(2);
     expect(r.state.plots.find((p) => p.index === right)!.building).toBeNull();
@@ -117,11 +117,11 @@ describe('world growth', () => {
     let s = createInitialState(7, T0);
     s = { ...s, taka: 1e12 };
     s = place(s, [[0, 'front', 0, b('housing', 2, 10)], [0, 'front', 1, b('housing', 2, 10)]]);
-    expect(applyAction(s, { type: 'build', plot: id(s, 0, 'front', 2), category: 'food' }).error).toBe('plotNotOwned');
-    s = applyAction(s, { type: 'merge', a: id(s, 0, 'front', 0), b: id(s, 0, 'front', 1) }).state;
+    expect(act(s, { type: 'build', plot: id(s, 0, 'front', 2), category: 'food' }).error).toBe('plotNotOwned');
+    s = act(s, { type: 'merge', a: id(s, 0, 'front', 0), b: id(s, 0, 'front', 1) }).state;
     expect(s.unlocked).toContain('food');
     expect(s.unlocked).not.toContain('healthcare');
-    expect(applyAction(s, { type: 'build', plot: id(s, 0, 'front', 1), category: 'food' }).error).toBeUndefined();
+    expect(act(s, { type: 'build', plot: id(s, 0, 'front', 1), category: 'food' }).error).toBeUndefined();
   });
 });
 
@@ -131,17 +131,17 @@ describe('cash bags and briefcase', () => {
     s = updatePickups({ ...s, nextBagAt: T0 }, T0 + 1, false);
     expect(s.bag?.plot).toBe(id(s, 0, 'front', 0));
     const before = s.taka;
-    const r = applyAction(s, { type: 'collectBag' });
+    const r = act(s, { type: 'collectBag' });
     expect(r.state.taka - before).toBeCloseTo(plotIncome(s, s.bag!.plot) * BALANCE.bagSeconds);
     expect(r.state.bag).toBeNull();
     expect(r.state.nextBagAt).toBeGreaterThanOrEqual(s.lastSimTime + BALANCE.bagMinMs);
-    expect(applyAction(r.state, { type: 'collectBag' }).error).toBe('nothingToCollect');
+    expect(act(r.state, { type: 'collectBag' }).error).toBe('nothingToCollect');
   });
 
   it('merging away the bag building removes the bag', () => {
     let s = place(world(), [[0, 'front', 0, b('housing', 1, 10)], [0, 'front', 1, b('housing', 1, 10)]]);
     s = { ...s, bag: { plot: id(s, 0, 'front', 1), kind: 'tip' } };
-    const r = applyAction(s, { type: 'merge', a: id(s, 0, 'front', 0), b: id(s, 0, 'front', 1) });
+    const r = act(s, { type: 'merge', a: id(s, 0, 'front', 0), b: id(s, 0, 'front', 1) });
     expect(r.state.bag).toBeNull();
   });
 
@@ -149,7 +149,7 @@ describe('cash bags and briefcase', () => {
     let s = place(world(), [[0, 'front', 0, b('housing', 3)]]);
     s = updatePickups({ ...s, nextBriefcaseAt: T0 }, T0, false);
     expect(s.briefcaseUntil).toBe(T0 + BALANCE.briefcaseVisibleMs);
-    s = applyAction(s, { type: 'collectBriefcase' }).state;
+    s = act(s, { type: 'collectBriefcase' }).state;
     expect(s.boostUntil).toBe(s.lastSimTime + BALANCE.briefcaseBoostMs);
     expect(totalIncome(s)).toBeCloseTo(totalIncome(s, false) * BALANCE.briefcaseMult);
     const later = updatePickups({ ...s, briefcaseUntil: T0 + 5 }, T0 + 10, false);
@@ -182,7 +182,7 @@ describe('buy-max', () => {
     const plan = upgradePlan(s, plot, 10);
     expect(plan.levels).toBe(3);
     expect(plan.cost).toBe(upgradeCost(b('housing', 1, 7)) + upgradeCost(b('housing', 1, 8)) + upgradeCost(b('housing', 1, 9)));
-    expect(applyAction(s, { type: 'upgrade', plot, count: 10 }).state.plots.find((p) => p.index === plot)!.building!.level).toBe(10);
+    expect(act(s, { type: 'upgrade', plot, count: 10 }).state.plots.find((p) => p.index === plot)!.building!.level).toBe(10);
   });
 
   it('Max buys as many as are affordable', () => {
@@ -190,7 +190,7 @@ describe('buy-max', () => {
     const plot = id(s, 0, 'front', 0);
     s = { ...s, taka: upgradeCost(b('housing', 1, 1)) + upgradeCost(b('housing', 1, 2)) + 1 };
     expect(upgradePlan(s, plot, 'max').levels).toBe(2);
-    const r = applyAction(s, { type: 'upgrade', plot, count: 'max' });
+    const r = act(s, { type: 'upgrade', plot, count: 'max' });
     expect(r.state.plots.find((p) => p.index === plot)!.building!.level).toBe(3);
     expect(r.state.taka).toBe(1);
   });
@@ -204,7 +204,7 @@ describe('save v1 -> v2', () => {
     };
     const s = migrate(v1)!;
     expect(s).not.toBeNull();
-    expect(s.version).toBe(2);
+    expect(s.version).toBe(3);
     expect(s.plots[3]).toMatchObject({ district: 0, slot: 3, row: 'front' });
     expect(s.unlocked).toEqual(['housing', 'food', 'healthcare', 'retail']);
     expect(s.bag).toBeNull();
