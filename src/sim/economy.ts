@@ -1,6 +1,7 @@
 import { BALANCE } from '../config/balance';
-import { BUILDINGS, type Category, type TierDef } from '../config/buildings';
+import { BUILDINGS, NEIGHBOUR_RULES, PATIENT_CAPACITY, type Category, type TierDef } from '../config/buildings';
 import type { Building, GameState } from '../state/types';
+import { neighbours, plotById } from './layout';
 
 export function tierDef(category: Category, tier: number): TierDef | undefined {
   return BUILDINGS[category][tier - 1];
@@ -32,10 +33,50 @@ export function buildingIncome(state: GameState, b: Building): number {
   return def.baseIncome * levelMult * occupancy(state, b) * globalMult(state) * eventMult(state, b);
 }
 
-export function totalIncome(state: GameState): number {
+/** Sum of neighbour bonuses for the building on a plot (0.2 = +20%). Each neighbour counts. */
+export function neighbourBonus(state: GameState, id: number): number {
+  const b = plotById(state, id)?.building;
+  if (!b) return 0;
+  let bonus = 0;
+  for (const nid of neighbours(state, id)) {
+    const n = plotById(state, nid)?.building;
+    if (!n) continue;
+    for (const r of NEIGHBOUR_RULES) {
+      if (r.target.category !== b.category) continue;
+      if (r.target.tier !== undefined && r.target.tier !== b.tier) continue;
+      if (r.neighbour.category !== n.category) continue;
+      if (r.neighbour.minTier !== undefined && n.tier < r.neighbour.minTier) continue;
+      bonus += r.bonus;
+    }
+  }
+  return bonus;
+}
+
+/** The golden briefcase boost is running at the sim's current time. */
+export function isBoosted(state: GameState): boolean {
+  return state.lastSimTime < state.boostUntil;
+}
+
+/** Income per second of the building on a plot: neighbours, back row and (optionally) the boost. */
+export function plotIncome(state: GameState, id: number, boosted = isBoosted(state)): number {
+  const p = plotById(state, id);
+  if (!p?.building) return 0;
+  const row = p.row === 'back' ? BALANCE.backRowIncome : 1;
+  const boost = boosted ? BALANCE.briefcaseMult : 1;
+  return buildingIncome(state, p.building) * Math.max(0, 1 + neighbourBonus(state, id)) * row * boost;
+}
+
+/** Total income per second. Pass `boosted = false` for the underlying rate (unlock thresholds). */
+export function totalIncome(state: GameState, boosted = isBoosted(state)): number {
   let sum = 0;
-  for (const p of state.plots) if (p.building) sum += buildingIncome(state, p.building);
+  for (const p of state.plots) if (p.building) sum += plotIncome(state, p.index, boosted);
   return sum;
+}
+
+/** Patients shown on a healthcare building: occupancy x tier capacity. */
+export function patients(state: GameState, b: Building): number {
+  if (b.category !== 'healthcare') return 0;
+  return Math.round(occupancy(state, b) * (PATIENT_CAPACITY[b.tier] ?? 0));
 }
 
 /** Cost to go from `level` to `level + 1`: baseCost * 1.18^level, rounded up to whole Taka. */

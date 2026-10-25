@@ -2,6 +2,7 @@ import { BALANCE } from '../config/balance';
 import type { ErrorKey } from '../config/strings';
 import type { Building, GameState } from '../state/types';
 import { maxTier, tierDef } from './economy';
+import { areNeighbours, neighbours, plotById } from './layout';
 
 /** Merge fee = 2x baseCost of the target tier. */
 export function mergeFee(b: Building): number {
@@ -11,10 +12,10 @@ export function mergeFee(b: Building): number {
 
 /** Why two plots cannot merge, or null if they can (ignores Taka). */
 export function mergeBlocker(state: GameState, a: number, b: number): ErrorKey | null {
-  const pa = state.plots[a];
-  const pb = state.plots[b];
+  const pa = plotById(state, a);
+  const pb = plotById(state, b);
   if (!pa || !pb) return 'noSuchPlot';
-  if (Math.abs(a - b) !== 1 || pa.row !== pb.row) return 'notAdjacent';
+  if (!areNeighbours(pa, pb)) return 'notAdjacent';
   const ba = pa.building;
   const bb = pb.building;
   if (!ba || !bb) return 'plotEmpty';
@@ -26,5 +27,5 @@ export function mergeBlocker(state: GameState, a: number, b: number): ErrorKey |
 
 /** Neighbours of `plot` that it could merge with right now (ignores Taka). */
 export function mergePartners(state: GameState, plot: number): number[] {
-  return [plot - 1, plot + 1].filter((n) => mergeBlocker(state, plot, n) === null);
+  return neighbours(state, plot).filter((n) => mergeBlocker(state, plot, n) === null);
 }

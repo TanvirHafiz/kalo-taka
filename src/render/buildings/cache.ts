@@ -3,7 +3,10 @@ import type { Category } from '../../config/buildings';
 import type { Building } from '../../state/types';
 import { hashSeed } from '../../util/rng';
 import { collectLights, withPaperMode, type LightOp } from '../draw';
+import { foodDesign } from './food';
+import { healthcareDesign } from './healthcare';
 import { housingDesign, type Design } from './housing';
+import { retailDesign } from './retail';
 
 /** Fixed per category so adding categories never changes existing seeds. */
 const CATEGORY_INDEX: Record<Category, number> = { housing: 1, food: 2, healthcare: 3, retail: 4 };
@@ -41,8 +44,12 @@ export function buildingSeed(runSeed: number, plotIndex: number, b: Building): n
 }
 
 function designFor(b: Building, seed: number): Design {
-  // Other categories arrive in M3; they reuse housing art until then.
-  return housingDesign(b, seed);
+  switch (b.category) {
+    case 'food': return foodDesign(b, seed);
+    case 'healthcare': return healthcareDesign(b, seed);
+    case 'retail': return retailDesign(b, seed);
+    default: return housingDesign(b, seed);
+  }
 }
 
 /** Two scale buckets only, so pinch-zoom never re-renders at every step. DPR is capped at 2. */

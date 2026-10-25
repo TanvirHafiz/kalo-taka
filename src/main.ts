@@ -6,15 +6,18 @@ import { BALANCE } from './config/balance';
 import { STRINGS, errorText, fmt } from './config/strings';
 import { clearSpriteCache } from './render/buildings/cache';
 import { ZOOM_MAX, ZOOM_MIN, createCamera, clampCamera, screenToWorldX } from './render/camera';
-import { CityRenderer, fitZoom, plotAtWorldX, worldWidth } from './render/city';
+import { CityRenderer, fitZoom, plotCenter, worldWidth } from './render/city';
 import { clearSceneCache } from './render/scene';
-import { applyAction } from './sim/actions';
+import { DISTRICTS } from './config/buildings';
+import { applyAction, bagValue } from './sim/actions';
+import { districtCount, hasBackRow, leftOf, plotById } from './sim/layout';
 import { tierDef } from './sim/economy';
 import { advance } from './sim/tick';
 import { createInitialState } from './state/initialState';
 import { loadGame, saveGame } from './state/save';
 import type { Action, GameState } from './state/types';
 import { addGrain } from './ui/grain';
+import { createButtonRow } from './ui/buttons';
 import { createHud } from './ui/hud';
 import { createPlotPanel } from './ui/panels/plotPanel';
 import { initToasts, showToast } from './ui/toasts';
@@ -42,7 +45,10 @@ let state: GameState;
 const loaded = loadGame(localStorage);
 if (loaded.kind === 'loaded') {
   // Closed-game offline earnings arrive in M5. Until then, resume from now.
-  state = { ...loaded.state, lastSimTime: Date.now() };
+  const now = Date.now();
+  state = { ...loaded.state, lastSimTime: now };
+  // an overdue briefcase would flash by behind the title card; give the player a minute first
+  if (state.nextBriefcaseAt < now) state = { ...state, nextBriefcaseAt: now + 60_000 };
 } else {
   state = createInitialState(randomSeed(), Date.now());
   if (loaded.kind === 'corrupt') showToast(STRINGS.toasts.loadFailed);
@@ -52,9 +58,19 @@ function save(): void {
   saveGame(localStorage, state);
 }
 
+/** Toasts for things that open up: categories, districts, the back row. */
+function announce(before: GameState, after: GameState): void {
+  for (const c of after.unlocked) {
+    if (!before.unlocked.includes(c)) showToast(fmt(STRINGS.toasts.unlockedCategory, { name: STRINGS.categories[c] }));
+  }
+  for (let d = districtCount(before); d < districtCount(after); d++) showToast(fmt(STRINGS.toasts.district, { name: DISTRICTS[d]?.name ?? '' }));
+  if (!hasBackRow(before) && hasBackRow(after)) showToast(STRINGS.toasts.backRow);
+}
+
 function dispatch(action: Action): void {
   // snapshot first: after a merge the right plot is empty, but the animation needs both buildings
   const before = state;
+  const bag = before.bag ? { kind: before.bag.kind, value: bagValue(before) } : null;
   const result = applyAction(state, action);
   if (result.error) {
     showToast(errorText(result.error));
@@ -63,21 +79,41 @@ function dispatch(action: Action): void {
   state = result.state;
   const now = Date.now();
   if (action.type === 'merge') {
-    const l = Math.min(action.a, action.b), r = Math.max(action.a, action.b);
-    const oldL = before.plots[l]?.building, oldR = before.plots[r]?.building;
+    const l = leftOf(before, action.a, action.b), r = l === action.a ? action.b : action.a;
+    const oldL = plotById(before, l)?.building, oldR = plotById(before, r)?.building;
     if (oldL && oldR) city.effects.merge(l, r, oldL, oldR, now);
-  } else if (action.type === 'build') city.effects.build(action.plot, now);
-  else if (action.type === 'upgrade') city.effects.upgrade(action.plot, now);
-  if (action.type === 'build') {
-    const b = state.plots[action.plot]?.building;
-    if (b) showToast(fmt(STRINGS.toasts.built, { name: tierDef(b.category, b.tier)?.name ?? '' }));
-  } else if (action.type === 'merge') {
-    const b = state.plots[Math.min(action.a, action.b)]?.building;
+    const b = plotById(state, l)?.building;
     if (b) showToast(fmt(STRINGS.toasts.merged, { name: tierDef(b.category, b.tier)?.name ?? '' }));
-  }
+  } else if (action.type === 'build') {
+    city.effects.build(action.plot, now);
+    const b = plotById(state, action.plot)?.building;
+    if (b) showToast(fmt(STRINGS.toasts.built, { name: tierDef(b.category, b.tier)?.name ?? '' }));
+  } else if (action.type === 'upgrade') city.effects.upgrade(action.plot, now);
+  else if (action.type === 'collectBag' && bag) showToast(fmt(STRINGS.bags.collected, { kind: STRINGS.bags[bag.kind], amount: formatTaka(bag.value) }));
+  else if (action.type === 'collectBriefcase') showToast(STRINGS.toasts.briefcase);
+  announce(before, state);
   panel.update(state);
-  hud.update(state);
+  hud.update(state, city.districtInView(state, cam));
 }
+
+/** Build button: open the selected empty plot, or the first empty plot you own. */
+function openBuild(): void {
+  const sel = panel.selected !== null ? plotById(state, panel.selected) : undefined;
+  const target = sel && sel.owned && !sel.building
+    ? sel
+    : [...state.plots]
+        .filter((p) => p.owned && !p.building)
+        .sort((a, b) => a.district - b.district || (a.row === b.row ? 0 : a.row === 'front' ? -1 : 1) || a.slot - b.slot)[0];
+  if (!target) {
+    showToast(STRINGS.build.noEmptyPlot);
+    return;
+  }
+  cam.x = plotCenter(target) - cam.viewW / cam.zoom / 2;
+  clampCamera(cam, worldWidth(state));
+  panel.open(target.index);
+  panel.update(state);
+}
+createButtonRow(overlay, openBuild, showToast);
 
 // --- Resize and DPR --------------------------------------------------------
 let dpr = 1;
@@ -157,10 +193,12 @@ function endPointer(e: PointerEvent, tap: boolean): void {
   }
   if (!tap || moved > 6) return;
   const rect = canvas.getBoundingClientRect();
-  const plot = plotAtWorldX(state, screenToWorldX(cam, e.clientX - rect.left));
-  if (plot === null) panel.close();
+  const hit = city.pick(state, cam, e.clientX - rect.left, e.clientY - rect.top, dpr);
+  if (!hit) panel.close();
+  else if (hit.kind === 'bag') dispatch({ type: 'collectBag' });
+  else if (hit.kind === 'briefcase') dispatch({ type: 'collectBriefcase' });
   else {
-    panel.open(plot);
+    panel.open(hit.plot);
     panel.update(state);
   }
 }
@@ -186,14 +224,17 @@ const bootTime = performance.now();
 let lastUiUpdate = 0;
 function frame(): void {
   const now = Date.now();
+  const before = state;
   const r = advance(state, now);
   state = r.state;
+  if (state !== before) announce(before, state);
+  clampCamera(cam, worldWidth(state));
   if (r.caughtUpMs >= BALANCE.catchUpToastMinMs && r.caughtUp > 0) {
     showToast(fmt(STRINGS.toasts.welcomeBack, { amount: formatTaka(r.caughtUp) }));
   }
   if (now - lastUiUpdate >= BALANCE.tickMs) {
     lastUiUpdate = now;
-    hud.update(state);
+    hud.update(state, city.districtInView(state, cam));
     panel.update(state);
   }
   city.frame(ctx, state, cam, panel.selected, dpr, now, (performance.now() - bootTime) / 1000);
@@ -227,5 +268,5 @@ splash.querySelector('button')!.addEventListener('click', () => splash.remove())
 overlay.appendChild(splash);
 splash.querySelector('button')!.focus();
 
-hud.update(state);
+hud.update(state, 0);
 requestAnimationFrame(frame);

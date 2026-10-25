@@ -1,25 +1,32 @@
 // Slide-up card for the selected plot. Buttons are keyed by id and updated in place,
 // so refreshing four times a second never swallows a click.
 import { BALANCE } from '../../config/balance';
-import { BUILDABLE_CATEGORIES } from '../../config/buildings';
+import { BUILDINGS, CATEGORIES, UNLOCK_HOUSING_TIER } from '../../config/buildings';
 import { STRINGS, errorText, fmt, type ErrorKey } from '../../config/strings';
-import { canBuild, canBuyPlot, canMerge, canUpgrade } from '../../sim/actions';
-import { buildCost, buildingIncome, plotCost, tierDef, upgradeCost } from '../../sim/economy';
-import { mergeBlocker, mergeFee } from '../../sim/merge';
-import type { Action, GameState } from '../../state/types';
+import { buildingSeed } from '../../render/buildings/cache';
+import { canBuild, canBuyPlot, canMerge, canUpgrade, upgradePlan } from '../../sim/actions';
+import { buildCost, neighbourBonus, patients, plotCost, plotIncome, tierDef } from '../../sim/economy';
+import { plotById } from '../../sim/layout';
+import { mergeFee, mergePartners } from '../../sim/merge';
+import type { Action, GameState, UpgradeCount } from '../../state/types';
 import { formatRate, formatTaka } from '../../util/money';
+import { buildingName } from '../../util/names';
 
 interface ButtonSpec {
   id: string;
   label: string;
   cost?: number;
   error: ErrorKey | null;
+  /** Shown instead of the error text when disabled for a non-error reason (locked category). */
+  note?: string;
   action: Action;
 }
 
 interface View {
   title: string;
+  subtitle: string;
   lines: string[];
+  showToggle: boolean;
   buttons: ButtonSpec[];
 }
 
@@ -30,70 +37,130 @@ export interface PlotPanel {
   update(state: GameState): void;
 }
 
-function viewFor(state: GameState, i: number): View {
-  const p = state.plots[i]!;
-  const n = i + 1;
+const COUNTS: { key: string; count: UpgradeCount; label: string }[] = [
+  { key: 'x1', count: 1, label: STRINGS.plot.buyX1 },
+  { key: 'x10', count: 10, label: STRINGS.plot.buyX10 },
+  { key: 'max', count: 'max', label: STRINGS.plot.buyMax },
+];
+
+function viewFor(state: GameState, id: number, count: UpgradeCount): View {
+  const p = plotById(state, id)!;
+  const n = p.slot + 1;
+  const back = p.row === 'back';
   if (!p.owned) {
     return {
       title: fmt(STRINGS.plot.unownedTitle, { n }),
+      subtitle: back ? STRINGS.plot.backRow : '',
       lines: [],
-      buttons: [{ id: 'buy', label: STRINGS.plot.buyLegally, cost: plotCost(state), error: canBuyPlot(state, i), action: { type: 'buyPlot', plot: i } }],
+      showToggle: false,
+      buttons: [{ id: 'buy', label: STRINGS.plot.buyLegally, cost: plotCost(state), error: canBuyPlot(state, id), action: { type: 'buyPlot', plot: id } }],
     };
   }
   if (!p.building) {
     return {
       title: fmt(STRINGS.plot.emptyTitle, { n }),
+      subtitle: back ? STRINGS.plot.backRow : '',
       lines: [],
-      buttons: BUILDABLE_CATEGORIES.map((category) => ({
-        id: `build-${category}`,
-        label: fmt(STRINGS.plot.build, { name: tierDef(category, 1)?.name ?? category }),
-        cost: buildCost(category),
-        error: canBuild(state, i, category),
-        action: { type: 'build', plot: i, category },
-      })),
+      showToggle: false,
+      buttons: CATEGORIES.map((category) => {
+        const unlocked = state.unlocked.includes(category);
+        const t1 = BUILDINGS[category][0]!;
+        const needed = BUILDINGS.housing[UNLOCK_HOUSING_TIER[category] - 1]?.name ?? '';
+        return {
+          id: `build-${category}`,
+          label: fmt(STRINGS.plot.build, { name: t1.name }),
+          ...(unlocked ? { cost: buildCost(category) } : { note: fmt(STRINGS.build.locked, { tier: needed }) }),
+          error: canBuild(state, id, category),
+          action: { type: 'build', plot: id, category },
+        };
+      }),
     };
   }
   const b = p.building;
-  const maxed = b.level >= BALANCE.maxLevel;
+  const lines = [
+    fmt(STRINGS.plot.tierLevel, { tier: b.tier, level: b.level }),
+    fmt(STRINGS.plot.incomeLine, { rate: formatRate(plotIncome(state, id)) }),
+  ];
+  const bonus = neighbourBonus(state, id);
+  if (Math.abs(bonus) > 0.001) lines.push(fmt(STRINGS.plot.bonusLine, { bonus: `${bonus > 0 ? '+' : ''}${Math.round(bonus * 100)}%` }));
+  if (back) lines.push(STRINGS.plot.backRow);
+  if (b.category === 'healthcare') {
+    lines.push(fmt(STRINGS.plot.patients, { n: patients(state, b) }));
+    lines.push(STRINGS.testsByLevel[b.level] ?? '');
+  }
   const buttons: ButtonSpec[] = [];
-  if (maxed) {
-    buttons.push({ id: 'upgrade', label: fmt(STRINGS.plot.maxLevel, { max: BALANCE.maxLevel }), error: 'maxLevel', action: { type: 'upgrade', plot: i } });
+  if (b.level >= BALANCE.maxLevel) {
+    buttons.push({ id: 'upgrade', label: fmt(STRINGS.plot.maxLevel, { max: BALANCE.maxLevel }), error: 'maxLevel', action: { type: 'upgrade', plot: id } });
   } else {
-    buttons.push({ id: 'upgrade', label: STRINGS.plot.upgrade, cost: upgradeCost(b), error: canUpgrade(state, i), action: { type: 'upgrade', plot: i } });
+    const plan = upgradePlan(state, id, count);
+    buttons.push({
+      id: 'upgrade',
+      label: plan.levels > 1 ? fmt(STRINGS.plot.upgradeN, { n: plan.levels }) : STRINGS.plot.upgrade,
+      cost: plan.cost,
+      error: canUpgrade(state, id, count),
+      action: { type: 'upgrade', plot: id, count },
+    });
   }
-  const lines = [fmt(STRINGS.plot.tierLevel, { tier: b.tier, level: b.level }), fmt(STRINGS.plot.incomeLine, { rate: formatRate(buildingIncome(state, b)) })];
-  let anyPartner = false;
-  for (const other of [i - 1, i + 1]) {
-    // Offer the merge whenever the pair is valid; only Taka may be missing.
-    if (mergeBlocker(state, i, other) !== null) continue;
-    anyPartner = true;
-    buttons.push({ id: `merge-${other}`, label: fmt(STRINGS.plot.merge, { n: other + 1 }), cost: mergeFee(b), error: canMerge(state, i, other), action: { type: 'merge', a: i, b: other } });
+  const partners = mergePartners(state, id);
+  for (const other of partners) {
+    const o = plotById(state, other)!;
+    buttons.push({ id: `merge-${other}`, label: fmt(STRINGS.plot.merge, { n: o.slot + 1 }), cost: mergeFee(b), error: canMerge(state, id, other), action: { type: 'merge', a: id, b: other } });
   }
-  if (!anyPartner) lines.push(STRINGS.plot.mergeHint);
-  return { title: tierDef(b.category, b.tier)?.name ?? '?', lines, buttons };
+  if (!partners.length) lines.push(STRINGS.plot.mergeHint);
+  return {
+    title: tierDef(b.category, b.tier)?.name ?? '?',
+    subtitle: buildingName(buildingSeed(state.seed, id, b), b.category),
+    lines,
+    showToggle: b.level < BALANCE.maxLevel,
+    buttons,
+  };
 }
 
 export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void): PlotPanel {
   const el = document.createElement('section');
   el.className = 'panel';
   el.setAttribute('aria-hidden', 'true');
+  el.setAttribute('aria-label', 'Plot');
   el.innerHTML = `
-    <div class="panel-head"><h2 class="panel-title"></h2><button class="panel-close" type="button" aria-label="${STRINGS.plot.close}">×</button></div>
+    <div class="panel-head"><div><h2 class="panel-title"></h2><div class="panel-sub"></div></div><button class="panel-close" type="button" aria-label="${STRINGS.plot.close}">×</button></div>
     <div class="panel-lines"></div>
+    <div class="buy-toggle" role="radiogroup" aria-label="Upgrade amount">
+      ${COUNTS.map((c) => `<button type="button" role="radio" data-count="${c.key}">${c.label}</button>`).join('')}
+    </div>
     <div class="panel-buttons"></div>
   `;
   root.appendChild(el);
   const titleEl = el.querySelector<HTMLElement>('.panel-title')!;
+  const subEl = el.querySelector<HTMLElement>('.panel-sub')!;
   const linesEl = el.querySelector<HTMLElement>('.panel-lines')!;
+  const toggleEl = el.querySelector<HTMLElement>('.buy-toggle')!;
   const buttonsEl = el.querySelector<HTMLElement>('.panel-buttons')!;
   const actions = new Map<string, Action>();
   let selected: number | null = null;
+  let countKey = 'x1';
+  let last: GameState | null = null;
+  try {
+    countKey = localStorage.getItem('kalotaka.buycount') ?? 'x1';
+  } catch {
+    // storage blocked: keep the default
+  }
 
   el.querySelector('.panel-close')!.addEventListener('click', () => panel.close());
   buttonsEl.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('button');
     const action = btn && actions.get(btn.dataset.id ?? '');
     if (btn && action && !btn.disabled) dispatch(action);
+  });
+  toggleEl.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-count]');
+    if (!btn) return;
+    countKey = btn.dataset.count ?? 'x1';
+    try {
+      localStorage.setItem('kalotaka.buycount', countKey);
+    } catch {
+      // ignore
+    }
+    if (last) panel.update(last);
   });
 
   const panel: PlotPanel = {
@@ -111,14 +178,24 @@ export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void
       el.setAttribute('aria-hidden', 'true');
     },
     update(state) {
-      if (selected === null || !state.plots[selected]) return;
-      const view = viewFor(state, selected);
+      last = state;
+      if (selected === null || !plotById(state, selected)) return;
+      const count = COUNTS.find((c) => c.key === countKey)?.count ?? 1;
+      const view = viewFor(state, selected, count);
       titleEl.textContent = view.title;
+      subEl.textContent = view.subtitle;
       linesEl.textContent = '';
       for (const line of view.lines) {
+        if (!line) continue;
         const div = document.createElement('div');
         div.textContent = line;
         linesEl.appendChild(div);
+      }
+      toggleEl.hidden = !view.showToggle;
+      for (const b of Array.from(toggleEl.querySelectorAll<HTMLButtonElement>('button'))) {
+        const on = b.dataset.count === countKey;
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-checked', String(on));
       }
 
       const wanted = new Set(view.buttons.map((b) => b.id));
@@ -132,14 +209,15 @@ export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void
           btn = document.createElement('button');
           btn.type = 'button';
           btn.dataset.id = spec.id;
-          btn.innerHTML = '<span class="btn-label"></span><span class="btn-cost"></span>';
+          btn.innerHTML = '<span class="btn-text"><span class="btn-label"></span><span class="btn-note"></span></span><span class="btn-cost"></span>';
         }
         if (buttonsEl.children[idx] !== btn) buttonsEl.insertBefore(btn, buttonsEl.children[idx] ?? null);
         actions.set(spec.id, spec.action);
         btn.querySelector('.btn-label')!.textContent = spec.label;
+        btn.querySelector('.btn-note')!.textContent = spec.note ?? '';
         btn.querySelector('.btn-cost')!.textContent = spec.cost !== undefined ? formatTaka(spec.cost) : '';
         btn.disabled = spec.error !== null;
-        btn.title = spec.error ? errorText(spec.error) : '';
+        btn.title = spec.note ?? (spec.error ? errorText(spec.error) : '');
       });
     },
   };

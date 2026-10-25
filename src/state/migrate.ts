@@ -1,5 +1,5 @@
 import { BALANCE } from '../config/balance';
-import { BUILDINGS, type Category } from '../config/buildings';
+import { BUILDINGS, CATEGORIES, UNLOCK_HOUSING_TIER, type Category } from '../config/buildings';
 import { SAVE_VERSION } from './initialState';
 import type { GameState } from './types';
 
@@ -9,7 +9,34 @@ type Raw = Record<string, unknown>;
  * Migrations keyed by the version they upgrade FROM. Each returns data at version + 1.
  * Add one entry per bump of SAVE_VERSION; never edit an old entry.
  */
-const MIGRATIONS: Record<number, (data: Raw) => Raw> = {};
+const MIGRATIONS: Record<number, (data: Raw) => Raw> = {
+  // v1 -> v2 (M3): plots gain district and slot; categories, bags, briefcase and HUD meters appear.
+  1: (d) => {
+    const plots = Array.isArray(d.plots) ? (d.plots as Raw[]) : [];
+    const now = typeof d.lastSimTime === 'number' ? d.lastSimTime : 0;
+    let topHousing = 0;
+    for (const p of plots) {
+      const b = p.building as Raw | null;
+      if (b && b.category === 'housing' && typeof b.tier === 'number') topHousing = Math.max(topHousing, b.tier);
+    }
+    return {
+      ...d,
+      plots: plots.map((p, i) => ({ ...p, district: 0, slot: typeof p.index === 'number' ? p.index : i })),
+      unlocked: CATEGORIES.filter((c) => UNLOCK_HOUSING_TIER[c] <= topHousing),
+      rng: typeof d.seed === 'number' ? d.seed >>> 0 : 1,
+      bag: null,
+      nextBagAt: now + BALANCE.bagMinMs,
+      briefcaseUntil: 0,
+      nextBriefcaseAt: now + BALANCE.briefcaseMinMs,
+      boostUntil: 0,
+      heat: { media: 0, anger: 0, committee: 0 },
+      influence: 0,
+      stars: 0,
+    };
+  },
+};
+
+const finite = (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v);
 
 function isBuilding(x: unknown): boolean {
   if (x === null) return true;
@@ -28,6 +55,8 @@ function isPlot(x: unknown, i: number): boolean {
   const p = x as Raw;
   return (
     p.index === i &&
+    Number.isInteger(p.district) && (p.district as number) >= 0 &&
+    Number.isInteger(p.slot) && (p.slot as number) >= 0 && (p.slot as number) < BALANCE.plotsPerRow &&
     (p.row === 'front' || p.row === 'back') &&
     typeof p.owned === 'boolean' &&
     typeof p.grabbed === 'boolean' &&
@@ -46,7 +75,13 @@ function isGameState(x: unknown): x is GameState {
     typeof s.lifetimeEarnings === 'number' &&
     typeof s.lastSimTime === 'number' &&
     Array.isArray(s.plots) &&
-    s.plots.every(isPlot)
+    s.plots.every(isPlot) &&
+    Array.isArray(s.unlocked) &&
+    s.unlocked.every((c) => typeof c === 'string' && (CATEGORIES as readonly string[]).includes(c)) &&
+    finite(s.rng) && finite(s.nextBagAt) && finite(s.briefcaseUntil) && finite(s.nextBriefcaseAt) && finite(s.boostUntil) &&
+    finite(s.influence) && finite(s.stars) &&
+    typeof s.heat === 'object' && s.heat !== null &&
+    (s.bag === null || (typeof s.bag === 'object' && Number.isInteger((s.bag as Raw).plot) && ['bhara', 'tip', 'commission'].includes((s.bag as Raw).kind as string)))
   );
 }
 

@@ -340,3 +340,138 @@ export function goldGate(ctx: Ctx, x: number, base: number, w: number, h: number
   gate(ctx, x, base, w, h, GOLD);
   circle(ctx, x + w / 2, base - h * 0.62, 3, GOLD_DARK);
 }
+
+// ---------------------------------------------------------------------------------------------
+// Parts for the food, healthcare and retail ladders.
+
+export function standingPerson(ctx: Ctx, x: number, base: number, shirt: string, skin: string, bottom = '#3d6fa3'): void {
+  box(ctx, x - 2.5, base - 8, 5, 8, bottom);
+  box(ctx, x - 3, base - 16, 6, 9, shirt);
+  circle(ctx, x, base - 19, 3, skin);
+}
+
+/** Paper steam puffs rising from a pot or kettle. */
+export function steam(ctx: Ctx, x: number, y: number, n = 3): void {
+  for (let i = 0; i < n; i++) circle(ctx, x + (i % 2 ? 3 : -2), y - i * 7, 3.5 + i, '#fbf8f0');
+}
+
+/** A sagging string of coloured bulbs that glow after dark. */
+export function fairyLights(ctx: Ctx, x1: number, x2: number, y: number, sag = 5): void {
+  const pts: [number, number][] = [];
+  for (let x = x1; x <= x2; x += 6) {
+    const t = (x - x1) / Math.max(1, x2 - x1);
+    pts.push([x, y + Math.sin(t * Math.PI) * sag]);
+  }
+  ctx.beginPath();
+  ctx.moveTo(x1, y);
+  ctx.quadraticCurveTo((x1 + x2) / 2, y + sag * 2, x2, y);
+  ctx.strokeStyle = 'rgba(58,46,37,0.7)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  const colors = ['#ffd27a', '#f28482', '#90be6d', '#a8c5da'];
+  pts.forEach(([px, py], i) => circle(ctx, px, py + 1.5, 1.4, colors[i % 4]!, false));
+  addLight(ctx, (c) => {
+    pts.forEach(([px, py], i) => {
+      c.shadowColor = colors[i % 4]!;
+      c.shadowBlur = 5 * Math.hypot(c.getTransform().a, c.getTransform().b);
+      c.fillStyle = colors[i % 4]!;
+      c.beginPath();
+      c.arc(px, py + 1.5, 1.6, 0, Math.PI * 2);
+      c.fill();
+    });
+  });
+}
+
+/** Tarp awning with a scalloped edge. */
+export function tarp(ctx: Ctx, x1: number, x2: number, y: number, depth: number, color: string): void {
+  const pts = [x1, y - depth, x2, y - depth, x2 + 3, y];
+  for (let x = x2; x > x1; x -= 8) pts.push(x - 4, y + 3, x - 8, y);
+  pts.push(x1 - 3, y);
+  poly(ctx, pts, color);
+  ctx.strokeStyle = 'rgba(255,250,240,0.4)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let x = x1 + 6; x < x2; x += 12) {
+    ctx.moveTo(x, y - depth + 1);
+    ctx.lineTo(x + 2, y - 1);
+  }
+  ctx.stroke();
+}
+
+/** Shop front with the rolling shutter pulled up: a dark interior with goods on shelves. */
+export function openShop(ctx: Ctx, x: number, base: number, w: number, h: number, rng: Rng, goods: readonly string[]): void {
+  box(ctx, x, base - h, w, h, '#4a3d33');
+  box(ctx, x - 1, base - h - 4, w + 2, 5, '#9aa0a6');
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(x - 1, base - h - 2);
+  ctx.lineTo(x + w + 1, base - h - 2);
+  ctx.stroke();
+  for (let sy = base - h + 6; sy < base - 6; sy += 8) {
+    box(ctx, x + 2, sy + 5, w - 4, 1.5, '#7a5236', false);
+    for (let gx = x + 4; gx < x + w - 5; gx += 5) if (rng() < 0.75) box(ctx, gx, sy, 3.5, 5, pick(rng, goods), false);
+  }
+  addWindowLight(ctx, x + 1, base - h + 1, w - 2, h - 2, 1);
+}
+
+/** A grid of glass panes (office or mall facade); some panes light up at night. */
+export function glassGrid(ctx: Ctx, x: number, y: number, w: number, h: number, cols: number, rows: number, color: string, litShare: number): void {
+  box(ctx, x, y, w, h, color);
+  const cw = w / cols, ch = h / rows;
+  ctx.strokeStyle = 'rgba(25,35,50,0.3)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  for (let c = 1; c < cols; c++) {
+    ctx.moveTo(x + c * cw, y + 1);
+    ctx.lineTo(x + c * cw, y + h - 1);
+  }
+  for (let r = 1; r < rows; r++) {
+    ctx.moveTo(x + 1, y + r * ch);
+    ctx.lineTo(x + w - 1, y + r * ch);
+  }
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.14)';
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.1, y + h);
+  ctx.lineTo(x + w * 0.45, y);
+  ctx.lineTo(x + w * 0.6, y);
+  ctx.lineTo(x + w * 0.25, y + h);
+  ctx.fill();
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) addWindowLight(ctx, x + c * cw + 1, y + r * ch + 1, cw - 2, ch - 2, litShare);
+}
+
+/** Green pharmacy cross that glows after dark. */
+export function crossSign(ctx: Ctx, cx: number, cy: number, s: number, color = '#3f9a5b'): void {
+  roundBox(ctx, cx - s, cy - s, s * 2, s * 2, s * 0.3, '#f5efe2');
+  box(ctx, cx - s * 0.25, cy - s * 0.75, s * 0.5, s * 1.5, color, false);
+  box(ctx, cx - s * 0.75, cy - s * 0.25, s * 1.5, s * 0.5, color, false);
+  addLight(ctx, (c) => {
+    c.shadowColor = '#7dff9a';
+    c.shadowBlur = 8 * Math.hypot(c.getTransform().a, c.getTransform().b);
+    c.fillStyle = '#9dffb0';
+    c.fillRect(cx - s * 0.25, cy - s * 0.75, s * 0.5, s * 1.5);
+    c.fillRect(cx - s * 0.75, cy - s * 0.25, s * 1.5, s * 0.5);
+  });
+}
+
+/** Round logo disc with a letter (franchise logos, hospital marks). */
+export function logoBadge(ctx: Ctx, cx: number, cy: number, r: number, color: string, letter: string): void {
+  circle(ctx, cx, cy, r, color);
+  fitText(ctx, letter, cx, cy, r * 1.5, r * 1.3, '#fffaf0');
+}
+
+/** Glowing sign text after dark (cinema marquees, banners). */
+export function glowText(ctx: Ctx, text: string, cx: number, cy: number, maxW: number, size: number, color: string): void {
+  fitText(ctx, text, cx, cy, maxW, size, color);
+  const font = ctx.font;
+  addLight(ctx, (c) => {
+    c.font = font;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.shadowColor = color;
+    c.shadowBlur = 8 * Math.hypot(c.getTransform().a, c.getTransform().b);
+    c.fillStyle = color;
+    c.fillText(text, cx, cy + size * 0.06);
+  });
+}

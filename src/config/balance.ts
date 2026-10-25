@@ -31,6 +31,23 @@ export const BALANCE = {
   maxOccupancy: 1.0,
 
   autosaveMs: 10_000,
+
+  /** The back row opens once this many plots are owned. */
+  backRowAtPlots: 20,
+  /** Back-row buildings earn this share of normal income. */
+  backRowIncome: 0.8,
+
+  /** Cash bags: one at a time, the next appears this long after the last was collected (ms). */
+  bagMinMs: 20_000,
+  bagMaxMs: 40_000,
+  /** Tapping a bag pays this many seconds of that building's income. */
+  bagSeconds: 30,
+  /** Golden briefcase: appears every 5 to 8 minutes, stays 10 s, gives 3x income for 60 s. */
+  briefcaseMinMs: 300_000,
+  briefcaseMaxMs: 480_000,
+  briefcaseVisibleMs: 10_000,
+  briefcaseBoostMs: 60_000,
+  briefcaseMult: 3,
 } as const;
 
 /** Visual pacing and street-life tuning. Read by render/ (and later by event timing). */
@@ -49,9 +66,9 @@ export const VISUAL = {
    * Traffic as a share of each lane's capacity: min + perDecade * log10(income/s + 1), capped.
    * Above 1.0 the lanes are full and traffic becomes a permanent jam (the wealth signal).
    */
-  trafficFillMin: 0.03,
-  trafficFillPerDecade: 0.13,
-  trafficFillMax: 1.08,
+  trafficFillMin: 0.02,
+  trafficFillPerDecade: 0.075,
+  trafficFillMax: 1.04,
   /** Lowest speed (world units/s) a jammed vehicle creeps at, so the jam is never frozen. */
   jamCrawl: 3,
   /** Pedestrians: base plus some per building, capped. */

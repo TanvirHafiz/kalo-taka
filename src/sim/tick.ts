@@ -1,6 +1,7 @@
 import { BALANCE } from '../config/balance';
 import type { GameState } from '../state/types';
 import { totalIncome } from './economy';
+import { growWorld, updatePickups } from './progress';
 
 export interface AdvanceResult {
   state: GameState;
@@ -32,24 +33,28 @@ export function advance(state: GameState, now: number): AdvanceResult {
 
 /**
  * Advance the simulation by `dtSec` seconds. Pure; the caller supplies time.
- * `now` is the wall-clock moment the state reaches after this step.
+ * `now` is the wall-clock moment the state reaches after this step. The briefcase boost only
+ * applies to the part of the step before it runs out, so a long gap never earns 3x throughout.
  */
-export function tick(state: GameState, dtSec: number, now: number): GameState {
-  const earned = totalIncome(state) * dtSec;
-  return {
+export function tick(state: GameState, dtSec: number, now: number, catchingUp = false): GameState {
+  const base = totalIncome(state, false);
+  const boostedSec = Math.min(dtSec, Math.max(0, Math.min(now, state.boostUntil) - state.lastSimTime) / 1000);
+  const earned = base * dtSec + base * (BALANCE.briefcaseMult - 1) * boostedSec;
+  const next: GameState = {
     ...state,
     taka: state.taka + earned,
     lifetimeEarnings: state.lifetimeEarnings + earned,
     lastSimTime: now,
   };
+  return updatePickups(growWorld(next), now, catchingUp);
 }
 
 /**
- * Apply a long gap (hidden tab) in one step. Income is constant while away in M1,
- * so one big step equals many small ones.
+ * Apply a long gap (hidden tab) in one step. Income does not change while away (nothing is
+ * bought), so one big step equals many small ones apart from the boost, which tick() splits.
  */
 export function catchUp(state: GameState, now: number): { state: GameState; earned: number } {
   const dtSec = Math.max(0, (now - state.lastSimTime) / 1000);
-  const next = tick(state, dtSec, now);
-  return { state: next, earned: next.taka - state.taka };
+  const next = tick(state, dtSec, now, true);
+  return { state: next, earned: next.lifetimeEarnings - state.lifetimeEarnings };
 }

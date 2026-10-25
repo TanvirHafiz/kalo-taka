@@ -3,10 +3,11 @@
 import { hashSeed, mulberry32 } from '../util/rng';
 import type { Camera } from './camera';
 import { box, circle, line, noise, paperShape, pick, range, withPaperMode, type Ctx } from './draw';
+import type { SkyStyle } from './districts';
 import { skyBody, type Lighting } from './lighting';
 import {
   CLOUD, CURB_A, CURB_B, FOOTPATH, FOOTPATH_LINE, LEAF, LEAF_DARK, PAPER_SHADOW, POLE, ROAD, ROAD_MARK, ROAD_PATCH, SKY,
-  SKYLINE_FAR, SKYLINE_NEAR, SKYLINE_NEAR_WIN, SKY_BAND, SUN, WIRE,
+  SUN, WATER, WATER_DARK, WIRE,
 } from './palette';
 
 export const FOOTPATH_H = 22;
@@ -28,8 +29,8 @@ export function clearSceneCache(): void {
   tiles.clear();
 }
 
-function skylineTile(seed: number, layer: 'far' | 'near', scale: number): Tile {
-  const key = `${seed}|${layer}|${scale}`;
+function skylineTile(seed: number, layer: 'far' | 'near', scale: number, style: SkyStyle): Tile {
+  const key = `${seed}|${layer}|${scale}|${style.id}`;
   const hit = tiles.get(key);
   if (hit) return hit;
   const canvas = document.createElement('canvas');
@@ -39,13 +40,13 @@ function skylineTile(seed: number, layer: 'far' | 'near', scale: number): Tile {
   ctx.scale(scale, scale);
   const rng = mulberry32(hashSeed(seed, layer === 'far' ? 11 : 12));
   const base = TILE_H + 4;
-  const color = layer === 'far' ? SKYLINE_FAR : SKYLINE_NEAR;
+  const color = layer === 'far' ? style.far : style.near;
   const windows: [number, number][] = [];
   withPaperMode(true, scale, () => {
     let x = 0;
     while (x < TILE_W) {
       const w = range(rng, 30, layer === 'far' ? 72 : 58);
-      const h = layer === 'far' ? range(rng, 70, 250) : range(rng, 40, 170);
+      const h = Math.min(TILE_H - 20, (layer === 'far' ? range(rng, 70, 250) : range(rng, 40, 170)) * style.tall);
       const ww = Math.min(w, TILE_W - x);
       const r = rng();
       // rooftop clutter goes first so the block covers its base
@@ -57,7 +58,7 @@ function skylineTile(seed: number, layer: 'far' | 'near', scale: number): Tile {
       }
       box(ctx, x, base - h, ww, h, color);
       if (layer === 'near') {
-        ctx.fillStyle = SKYLINE_NEAR_WIN;
+        ctx.fillStyle = style.nearWin;
         for (let wy = base - h + 8; wy < base - 14; wy += 12) {
           for (let wx = x + 5; wx < x + ww - 6; wx += 9) {
             if (rng() < 0.7) {
@@ -93,9 +94,9 @@ function skylineLights(tile: Tile): HTMLCanvasElement {
 }
 
 /** Night lights of the near skyline, drawn after the tint at the same parallax as the layer. */
-export function drawSkylineLights(ctx: Ctx, cam: Camera, groundY: number, seed: number, scale: number, alpha: number): void {
+export function drawSkylineLights(ctx: Ctx, cam: Camera, groundY: number, seed: number, scale: number, alpha: number, style: SkyStyle): void {
   if (alpha < 0.02) return;
-  const tile = skylineTile(seed, 'near', scale);
+  const tile = skylineTile(seed, 'near', scale, style);
   const lights = skylineLights(tile);
   const tw = TILE_W * cam.zoom;
   const th = TILE_H * cam.zoom;
@@ -106,8 +107,8 @@ export function drawSkylineLights(ctx: Ctx, cam: Camera, groundY: number, seed: 
   ctx.restore();
 }
 
-function drawLayer(ctx: Ctx, cam: Camera, groundY: number, seed: number, layer: 'far' | 'near', parallax: number, scale: number): void {
-  const tile = skylineTile(seed, layer, scale);
+function drawLayer(ctx: Ctx, cam: Camera, groundY: number, seed: number, layer: 'far' | 'near', parallax: number, scale: number, style: SkyStyle): void {
+  const tile = skylineTile(seed, layer, scale, style);
   const tw = TILE_W * cam.zoom;
   const th = TILE_H * cam.zoom;
   const offset = ((cam.x * cam.zoom * parallax) % tw + tw) % tw;
@@ -125,7 +126,7 @@ function cloud(ctx: Ctx, x: number, y: number, s: number): void {
 }
 
 /** Everything behind the plots, in screen space. */
-export function drawBackdrop(ctx: Ctx, cam: Camera, groundY: number, seed: number, scale: number, timeSec: number, light: Lighting): void {
+export function drawBackdrop(ctx: Ctx, cam: Camera, groundY: number, seed: number, scale: number, timeSec: number, light: Lighting, style: SkyStyle): void {
   ctx.fillStyle = SKY;
   ctx.fillRect(0, 0, cam.viewW, groundY + 2);
 
@@ -140,7 +141,7 @@ export function drawBackdrop(ctx: Ctx, cam: Camera, groundY: number, seed: numbe
   }
   ctx.lineTo(cam.viewW, groundY + 2);
   ctx.closePath();
-  ctx.fillStyle = SKY_BAND;
+  ctx.fillStyle = style.band;
   ctx.fill();
 
   // sunset and sunrise glow: warm the sky itself so the dusk tint does not just turn it grey
@@ -187,8 +188,17 @@ export function drawBackdrop(ctx: Ctx, cam: Camera, groundY: number, seed: numbe
     cloud(ctx, x, y, s);
   }
 
-  drawLayer(ctx, cam, groundY, seed, 'far', 0.2, scale);
-  drawLayer(ctx, cam, groundY, seed, 'near', 0.45, scale);
+  drawLayer(ctx, cam, groundY, seed, 'far', 0.2, scale, style);
+  if (style.lake) {
+    // a strip of lake in front of the far skyline, with paper ripples
+    const ly = groundY - 34 * cam.zoom;
+    ctx.fillStyle = WATER;
+    ctx.fillRect(0, ly, cam.viewW, 34 * cam.zoom);
+    ctx.fillStyle = WATER_DARK;
+    const off = ((cam.x * cam.zoom * 0.3) % 60 + 60) % 60;
+    for (let x = -off; x < cam.viewW; x += 60) ctx.fillRect(x, ly + 10 * cam.zoom, 26 * cam.zoom, 2 * cam.zoom);
+  }
+  drawLayer(ctx, cam, groundY, seed, 'near', 0.45, scale, style);
 }
 
 /** Street-side trees between plots, in world space (drawn behind buildings). */

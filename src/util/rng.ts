@@ -23,3 +23,15 @@ export function hashSeed(...parts: number[]): number {
 export function randomSeed(): number {
   return (Math.random() * 4294967296) >>> 0;
 }
+
+/**
+ * One pure mulberry32 step for state kept in a save: returns [value in 0..1, next state].
+ * Same sequence as mulberry32(seed).
+ */
+export function rngStep(state: number): [number, number] {
+  const a = (state + 0x6d2b79f5) >>> 0;
+  let t = a;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return [((t ^ (t >>> 14)) >>> 0) / 4294967296, a];
+}

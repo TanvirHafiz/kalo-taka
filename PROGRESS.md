@@ -42,6 +42,29 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
   - The lights follow these animations at night. With prefers-reduced-motion they are skipped.
 - Night lights are composed back to front in one layer, so poles, wires, people and traffic block the glow behind them. Performance on desktop with a busy street: about 1.1 ms script per frame by day and about 2 ms at night.
 
+## M3: All categories and HUD
+
+- [x] Food, healthcare and retail ladders with unlock rules and neighbour bonuses
+- [x] Patient counts on healthcare; signboard name generator with blocklist
+- [x] Full HUD, building card, plot card, buy-max toggle, cash bags and golden briefcase
+- [x] Back row unlock at 20 plots; first three districts
+
+### Decisions made in M3
+
+- Neighbour bonuses stack per qualifying neighbour (your choice). Pharmacy next to a Diagnostic Centre: +30% -10% = +20%.
+- Districts sit side by side with a gate between them. Plots across a gate are not neighbours (your choice). Mirpara is open from the start, Dhanpur opens at ৳5,000/s and Gulmohor at ৳2 lakh/s. Unlocks use income without the briefcase boost, and never lock again.
+- Back row: opens at 20 owned plots and adds 12 back plots per district. It is drawn smaller and higher, shifted half a plot so it shows between front buildings, and earns 80%. Back plots neighbour only other back plots.
+- Categories unlock the first time you own housing of tier 3 (food), 4 (healthcare) and 5 (retail), and stay unlocked.
+- Cash bags stay until tapped, one at a time (your choice). The next one comes 20 to 40 s after you collect. A bag pays 30 s of that building's income. If its building is merged away, the bag goes too.
+- Golden briefcase: every 5 to 8 minutes, visible for 10 s, gives 3x income for 60 s. While you are away (catch-up) no briefcase spawns, and a running boost only counts until it ends.
+- Buy-max: x10 is capped at the levels left and needs their full cost. Max buys as many levels as you can afford. Your choice of x1/x10/Max is remembered.
+- HUD: procedural avatar, Taka, income (gold while boosted), district name, and the Media Heat, Tenant Anger, Committee, Influence and Offshore Stars gauges, all at 0 until M4/M5 (your choice). Each gauge has an icon and a label as well as a colour.
+- Buttons: Build jumps to the selected or first empty plot you own. Posters, Nephews and Settings say they open in a later update. Flee stays hidden until M5.
+- Healthcare: patients = occupancy x tier capacity (12, 30, 80, 200, 480). Each level's card line names a new test.
+- Signboard names come from the spec word lists plus extras. Real well-known names that the spec lists can produce (Haji Biryani, Nanna Biryani, Popular Diagnostic, New Market and others) are blocklisted.
+- Traffic was turned down at your request: about 37% of lane capacity at ৳40,000/s. A full jam only appears at extreme late-game income.
+- Save format v2, with migration from v1 (district and slot added, unlocks worked out from your highest house).
+
 ### Art notes
 
 - Style: **paper cutout**, chosen from the Style Lab on 2026-10-25. Muted craft paper palette, no outlines. Every shape is a cut piece with slightly uneven edges and a soft drop shadow. The sky is flat paper with a torn horizon strip, and a paper grain overlay (CSS, generated once) sits over the canvas.
