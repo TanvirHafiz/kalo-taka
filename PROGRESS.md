@@ -177,7 +177,8 @@ What changed from the spec (only costs and waits; every income in the building t
 - Permits: build 10 s (was 30), upgrade 1 s x tier per level (was 5), merge 20 s x tier (was 60).
 - Offshore Stars: divisor 1.1e9 instead of 1e7 (x100 in game). If you already fled under the old numbers, your next offer may read 0 for a while (it is clamped, never negative).
 - Mirpara opens Dhanpur around 28 min and Gulmohor around 77 min. Purbopur (৳100 crore/s) and Notun Char (৳5,000 crore/s) are for later runs, once stars have multiplied your income.
-- Known side effects to revisit: Permit Bhai Polash (25% shorter permits for a 4% skim) is a poor deal now that permits are seconds long, and speed money's ৳50,000 floor is more than early upgrades cost.
+- Permit Bhai Polash now cuts permit waits and speed money by 30% (+8% per level, 70% at level 5) and skims 1.5% (falling 0.2% per level), instead of 25% shorter permits for a 4% skim.
+- Speed money has its own ৳1,000 floor (was the general ৳50,000 one), so rushing a cheap early job costs a cheap bribe.
 
 ### Districts (M6)
 

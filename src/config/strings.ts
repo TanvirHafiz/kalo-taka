@@ -159,7 +159,7 @@ export const STRINGS = {
     names: { rony: 'Rent Collector Rony', polash: 'Permit Bhai Polash', mithu: 'Media Bhagne Mithu', dipu: 'Driver Dipu' },
     does: {
       rony: 'Collects cash bags you leave for 10 s, at {pct} value',
-      polash: 'Permit waits {pct} shorter',
+      polash: 'Permit waits and speed money {pct} less',
       mithu: 'Media Heat fades {pct} faster',
       dipu: 'Offline earnings cap {hours} h',
     },

@@ -82,6 +82,8 @@ export const CORRUPTION = {
   permitMergePerTier: 20,
   /** speedMoney = remaining s x income/s x this x (1 - influence / influenceDiscountDiv). */
   speedMoneyFactor: 0.5,
+  /** Speed money has its own small floor (the general minPrice is more than early jobs cost). */
+  speedMoneyMin: 10 * MONEY_SCALE,
   influenceDiscountDiv: 200,
 
   /** Heat meters run 0..100. */
@@ -172,7 +174,8 @@ export interface NephewDef {
 /** Nephew effects. Rony: bag value share. Polash: permit wait cut. Mithu: extra Media Heat decay. Dipu: offline cap (hours, M5). */
 export const NEPHEWS: Record<NephewId, NephewDef> = {
   rony: { skim: 0.03, skimPerLevel: 0.003, effect: 0.5, effectPerLevel: 0.1 },
-  polash: { skim: 0.04, skimPerLevel: 0.004, effect: 0.25, effectPerLevel: 0.05 },
+  // M6: permits are only seconds long now, so Polash also discounts speed money, and skims less
+  polash: { skim: 0.015, skimPerLevel: 0.002, effect: 0.3, effectPerLevel: 0.08 },
   mithu: { skim: 0.03, skimPerLevel: 0.003, effect: 0.5, effectPerLevel: 0.2 },
   dipu: { skim: 0.02, skimPerLevel: 0.002, effect: 8, effectPerLevel: 1 },
 };

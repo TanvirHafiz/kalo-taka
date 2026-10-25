@@ -73,7 +73,7 @@ describe('permits', () => {
     s = applyAction(s, { type: 'upgrade', plot: 0 }).state;
     const remaining = permitSeconds(s, 'upgrade', 4, 1);
     const expected = Math.ceil(remaining * totalIncome(s, false) * 0.5);
-    expect(speedMoneyCost(s, 0)).toBe(Math.max(CORRUPTION.minPrice, expected));
+    expect(speedMoneyCost(s, 0)).toBe(Math.max(CORRUPTION.speedMoneyMin, expected));
     const r = applyAction(s, { type: 'speedMoney', plot: 0 });
     expect(plot(r.state, 0).building!.level).toBe(4);
     expect(r.state.heat.committee).toBeCloseTo(CORRUPTION.committeeFromSpeedMoney);
@@ -84,7 +84,7 @@ describe('permits', () => {
     let s = city({});
     s = { ...s, plots: s.plots.map((p) => (p.slot === 0 ? { ...p, owned: true } : p)) };
     s = applyAction(s, { type: 'build', plot: 0, category: 'housing' }).state;
-    expect(speedMoneyCost(s, 0)).toBe(CORRUPTION.minPrice);
+    expect(speedMoneyCost(s, 0)).toBe(CORRUPTION.speedMoneyMin);
   });
 });
 
@@ -215,10 +215,13 @@ describe('nephews', () => {
     expect(totalIncome(s)).toBeCloseTo(before * (1 - NEPHEWS.rony.skim));
   });
 
-  it('Rony collects bags at 50% by himself after 10 s; Polash cuts permits by 25%', () => {
+  it('Rony collects bags at 50% by himself after 10 s; Polash cuts permits and speed money', () => {
     let s = city({ 0: H(3), 1: H(3), 2: H(3), 3: H(3), 4: H(3) });
     s = { ...s, milestones: { firstMerge: true, firstInquiry: true, firstTier5: true, maxBuildings: 5 }, nephews: { ...s.nephews, rony: { hired: true, level: 0 }, polash: { hired: true, level: 0 } } };
-    expect(permitSeconds(s, 'build', 1)).toBeCloseTo(CORRUPTION.permitBuild * 0.75);
+    expect(permitSeconds(s, 'build', 1)).toBeCloseTo(CORRUPTION.permitBuild * (1 - NEPHEWS.polash.effect));
+    const withJob = applyAction({ ...s, nephews: { ...s.nephews, polash: { hired: false, level: 0 } } }, { type: 'upgrade', plot: 0, count: 10 }).state;
+    const withPolash = { ...withJob, nephews: { ...withJob.nephews, polash: { hired: true, level: 0 } } };
+    expect(speedMoneyCost(withPolash, 0)).toBeLessThan(speedMoneyCost(withJob, 0));
     s = { ...s, nextBagAt: T0 };
     // he leaves a fresh bag alone for 10 s so a watching player can tap it at full value
     const fresh = at(s, T0 + 250);

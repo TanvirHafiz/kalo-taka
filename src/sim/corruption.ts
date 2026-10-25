@@ -115,8 +115,10 @@ export function speedMoneyCost(state: GameState, plot: number): number {
   if (!job || job.kind === 'fill') return Infinity;
   const remaining = Math.max(0, (job.until - state.lastSimTime) / 1000);
   const dubai = state.destination === 'dubai' ? 1 - PRESTIGE.dubaiSpeedCut : 1;
-  const price = remaining * baseIncome(state) * CORRUPTION.speedMoneyFactor * (1 - effectiveInfluence(state) / CORRUPTION.influenceDiscountDiv) * dubai;
-  return Math.max(CORRUPTION.minPrice, Math.ceil(price));
+  // Permit Bhai Polash knows the officer: his cut of the wait also comes off the bribe
+  const polash = 1 - nephewEffect(state, 'polash');
+  const price = remaining * baseIncome(state) * CORRUPTION.speedMoneyFactor * (1 - effectiveInfluence(state) / CORRUPTION.influenceDiscountDiv) * dubai * polash;
+  return Math.max(CORRUPTION.speedMoneyMin, Math.ceil(price));
 }
 
 /** Add heat, reduced by Influence. */
