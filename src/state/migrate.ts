@@ -1,5 +1,6 @@
 import { BALANCE, MONEY_SCALE } from '../config/balance';
 import { BUILDINGS, CATEGORIES, UNLOCK_HOUSING_TIER, type Category } from '../config/buildings';
+import { DESTINATIONS, EVENT_IDS } from '../config/events';
 import { SAVE_VERSION, m5Defaults, noNephews } from './initialState';
 import type { GameState } from './types';
 
@@ -139,7 +140,9 @@ function isGameState(x: unknown): x is GameState {
     typeof s.bachelorsAllowed === 'boolean' && finite(s.speedPaid) && Array.isArray(s.events) &&
     finite(s.runPlayMs) && finite(s.nextEventPlayMs) && finite(s.rentHikeUntil) && finite(s.districtsSeen) &&
     Array.isArray(s.lastEvents) && Array.isArray(s.doneThisRun) && Array.isArray(s.generators) && Array.isArray(s.frontage) &&
-    (s.event === null || (typeof s.event === 'object' && typeof (s.event as Raw).id === 'string' && finite((s.event as Raw).until))) &&
+    (s.event === null || (typeof s.event === 'object' && (EVENT_IDS as readonly unknown[]).includes((s.event as Raw).id) && finite((s.event as Raw).until))) &&
+    (s.sideBiz === null || (typeof s.sideBiz === 'object' && Number.isInteger((s.sideBiz as Raw).plot) && ['parking', 'cylinder'].includes((s.sideBiz as Raw).kind as string))) &&
+    (s.destination === null || DESTINATIONS.some((d) => d.id === s.destination)) &&
     typeof s.tutorial === 'object' && s.tutorial !== null && typeof s.stats === 'object' && s.stats !== null &&
     (s.bag === null || (typeof s.bag === 'object' && Number.isInteger((s.bag as Raw).plot) && ['bhara', 'chanda', 'commission'].includes((s.bag as Raw).kind as string)))
   );

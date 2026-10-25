@@ -129,4 +129,6 @@ export const OFFLINE = {
   capHours: 4,
   /** Step size while simulating time away (ms). */
   stepMs: 60_000,
+  /** Mamun only reports time away longer than this (a quick reload is not "while you slept"). */
+  reportMinMs: 60_000,
 } as const;

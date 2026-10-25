@@ -19,7 +19,7 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 - **Permit waits:** actions are instant until M4.
 - **Merging:** all 7 housing tiers are in config, so tier 3 can merge up to tier 7 already. Merge takes two plot numbers; the result always lands on the left plot.
 - **Clock:** the sim uses wall-clock epoch ms (`Date.now()`). The accumulator is the gap between now and `lastSimTime`. A gap over 1 s (hidden tab, sleep) is applied as one full-rate catch-up step.
-- **Closed game:** reloading resumes from now with no offline earnings. The 25% offline rate and the Mamun report come in M5.
+- **Closed game:** see M5 for offline earnings.
 - **Saves:** key `kalotaka.save`. A corrupt or unmigratable save is copied to `kalotaka.save.bak` before starting fresh. The game saves every 10 s, on tab hide and on `pagehide`. Base64 export/import exists in `save.ts`; the buttons come with the M6 settings panel.
 - **Title card:** shows the disclaimer line from the spec.
 
@@ -59,7 +59,7 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 - Golden briefcase: every 5 to 8 minutes, visible for 10 s, gives 3x income for 60 s. While you are away (catch-up) no briefcase spawns, and a running boost only counts until it ends.
 - Buy-max: x10 is capped at the levels left and needs their full cost. Max buys as many levels as you can afford. Your choice of x1/x10/Max is remembered.
 - HUD: procedural avatar, Taka, income (gold while boosted), district name, and the Media Heat, Tenant Anger, Committee, Influence and Offshore Stars gauges, all at 0 until M4/M5 (your choice). Each gauge has an icon and a label as well as a colour.
-- Buttons: Build jumps to the selected or first empty plot you own. Posters, Nephews and Settings say they open in a later update. Flee stays hidden until M5.
+- Buttons: Build jumps to the selected or first empty plot you own. Posters, Nephews and Settings say they open in a later update. Flee appears in M5.
 - Healthcare: patients = occupancy x tier capacity (12, 30, 80, 200, 480). Each level's card line names a new test.
 - Signboard names come from the spec word lists plus extras. Real well-known names that the spec lists can produce (Haji Biryani, Nanna Biryani, Popular Diagnostic, New Market and others) are blocklisted.
 - Traffic was turned down at your request: about 37% of lane capacity at ৳40,000/s. A full jam only appears at extreme late-game income.
@@ -91,11 +91,55 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 - Nephews:
   - Hire costs 2 min of income; upgrades cost 3, 6, 12, 24 and 48 min (your choice). Each upgrade improves the effect and lowers the skim. Levels are kept if you fire one, and firing adds +15 Tenant Anger ("Your Khala is upset").
   - Unlocks: Rony at 5 buildings, Polash at your first merge, Mithu at your first inquiry, Dipu at your first tier 5.
-  - Rony auto-collects bags at 50%+. Dipu's offline cap takes effect with M5's offline earnings.
+  - Rony auto-collects bags at 50%+. Dipu raises the offline cap (M5).
   - The total skim is shown next to income in the HUD.
 - Tenant fixes on housing cards: water pump (15 s of housing income, -20 Anger) and allow bachelors (once, -10).
 - Catch-up while the tab is hidden now steps at most 5 s at a time, cut at every permit, inquiry, poster and boost deadline, so heat, inquiries and permits play out in order.
 - Save format v3 (migrates from v2; milestones are worked out from your buildings).
+
+## M5: Events, comedy and prestige
+
+- [x] Event scheduler and all 12 events
+- [x] News ticker, Manager Mamun, bubbles, with minimum string pool sizes met
+- [x] Onboarding tutorial
+- [x] Flee to Canada: star formula, destinations, family perks, cutscene
+- [x] Closed-game offline earnings with Mamun report
+
+### Decisions made in M5
+
+- Scheduler: one event at a time, every 3 to 6 minutes of visible play (the first after 2.5 min). Events never repeat within the last two. They only start while you are playing, never during catch-up or offline. Unlocks: load-shedding and monsoon once you own a building, hartal at 10 buildings, dengue with a hospital, rent hike and gas at 5 housing buildings, VIP after your first tier 5, journalist above Media 50, Prado once Driver Dipu is hired, flyover with a shop, election after 30 min and Ramadan after 45 min of play (once per run each).
+- Events (durations and multipliers are in `config/events.ts`):
+  - Load-shedding (60 s) darkens about half your buildings to half income. Generators cost 2 min of their income and keep that building lit in every future load-shedding; while the grid is down they also earn 2% of its income as "Diesel Supply".
+  - Monsoon (90 s): housing -30%, flood water on the street, six paper boats worth 10 s of income each.
+  - Hartal (60 s): food and shops -70%. Open a bus parking lot on a free plot for side income.
+  - Dengue (120 s): hospitals x3 with mosquitoes. Nets cost 30 s and give +15 Influence.
+  - VIP and hartal unlocks look at this run's buildings, not old milestones.
+  - Rent hike: accept for +20% housing rent for 10 min and +30 Anger, or decline.
+  - Gas line problem (90 s): open a cylinder shop on a free plot you own, or ignore for +15 Anger.
+  - VIP visit (45 s): -20% and a barricade. A welcome gate costs 30 s and gives +25 Influence.
+  - Journalist (60 s): +1 Media per second until you buy ad space (30 s).
+  - Prado crash: pay 20 s of income, or blame the rickshaw for +5 Media. Unanswered, you pay.
+  - Election (180 s): poster prices halved, and donation and event Influence doubled. "Open Posters" jumps to the sheet.
+  - Ramadan (240 s): food +50% at iftar time, lanterns at dusk. An iftar costs 30 s, gives -40 Anger and +10 Influence.
+  - Flyover: one of your buildings gets +15% frontage income for the rest of the run, plus a ribbon-cutting photo-op (+10 Influence).
+- Side incomes (bus parking, cylinder shop) are 5% of your base income, so they stay worth having (your choice). They take an empty owned plot, which you can build on again later.
+- Ticker: red "BREAKING" strip along the bottom. Your actions and events queue headlines; filler comes every 14 s otherwise. The buttons and toasts sit above it.
+- Mamun: avatar bottom-left. He shows tutorial steps, event popups with live prices, the offline report and an idle line about every 100 s. Tap his face to skip to the next message.
+- Bubbles: 30 lines per building type plus event lines (your choice), one every ~3 s above a random building on screen.
+- Tutorial: 8 steps. Mamun gives a "starter loan" for each scripted step's shortfall (your choice); it is not counted as earnings. Permits clear in 1 s until it ends. Skippable at any step. Old saves with progress skip it.
+- Flee to Canada: stars = floor(sqrt(lifetime / ৳100 crore)) minus stars already earned; each star is +10% income. The button appears once one star is on offer and pulses when the offer is at least half of what you have.
+  - Destinations: Toronto (+25% housing next run), Kuala Lumpur at 10 stars (permits -25%), Dubai at 30 (speed money -30%), London at 75 (Media fades 50% faster), island at 200 (heat gain -25%).
+  - Family perks: at 5 stars, 3 extra plots; at 15, ৳10 crore of seed money; at 40, food and healthcare unlock one tier early; at 100, inquiries last 3 min; at 250, a free Dotola.
+  - Kept: stars, nephew levels (unhired), lifetime earnings, milestones, stats and the calendar. Everything else starts over with a new seed. A 6 s skippable airport cutscene plays.
+- Offline: a closed game earns 25% of income for up to 4 h (Driver Dipu raises the cap). It is simulated in 1-minute steps, so permits, inquiries and heat move on. Past the cap, time passes with no income. Mamun reports it when you were away more than a minute.
+- Tutorial: if it is not finished after 15 min of play, it ends on its own (so 1 s permits never linger). Tap Mamun's face when he has nothing to say to bring back the tutorial step or the running event's choices; "Later" no longer loses them.
+- Save format v5 (migrates from v4).
+
+### Eviction drive (added on request)
+
+- Any building you own can be bulldozed from its card, so a building boxed in by mismatched neighbours is never a dead end. The button needs a second tap within 3 s.
+- You get back 25% of what it cost (its tier's base cost plus the upgrades it has had). Heat: housing +25 Anger and +15 Media, other buildings +5 Anger and +8 Media, plus +5 Committee either way.
+- Not possible during a permit, an inquiry or the tutorial. A cash bag on the building goes with it. The plot is free to build on at once.
 
 ## Changes requested after M4 (2026-10-25)
 

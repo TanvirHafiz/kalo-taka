@@ -2,11 +2,12 @@
 // Reads state, never writes it. Plot positions come from (district, row, slot), never from ids.
 import { BALANCE } from '../config/balance';
 import { DISTRICTS } from '../config/buildings';
-import { STRINGS, fmt } from '../config/strings';
+import { BUBBLES, STRINGS, fmt } from '../config/strings';
 import { dayPhase } from '../sim/daycycle';
 import { baseIncome, neighbourBonus, patients, plotCost } from '../sim/economy';
 import { districtCount, plotById } from '../sim/layout';
 import { CORRUPTION } from '../config/balance';
+import { EVENT_TUNING, type EventId } from '../config/events';
 import type { GameState, Job, Plot } from '../state/types';
 import { formatRate, formatTaka } from '../util/money';
 import { hashSeed, mulberry32 } from '../util/rng';
@@ -17,6 +18,7 @@ import { skyStyle } from './districts';
 import { box, circle, ellipse, fitText, line, paperShape, poly, range, roundBox, setPaperMode, type Ctx } from './draw';
 import { Effects, type PlotFx } from './effects';
 import { drawFill, drawGrabFlag, drawInquiry, drawPermitBar, drawPoster, drawScaffold, posterImage } from './corruptionArt';
+import { drawBarricade, drawBoat, drawBubble, drawBunting, drawCylinders, drawFlood, drawFlyoverSign, drawGenerator, drawJournalist, drawLantern, drawMosquitoes, drawParking } from './eventArt';
 import { drawTint, lightingAt } from './lighting';
 import { GOLD, GROUND, GROUND_DARK, INK, LEAF, LEAF_DARK } from './palette';
 import { People } from './people';
@@ -219,9 +221,12 @@ function blit(ctx: Ctx, img: HTMLCanvasElement, p: Plot, s: Sprite, fx: PlotFx |
   ctx.restore();
 }
 
-export type Pick = { kind: 'plot'; plot: number } | { kind: 'bag' } | { kind: 'briefcase' };
+export type Pick = { kind: 'plot'; plot: number } | { kind: 'bag' } | { kind: 'briefcase' } | { kind: 'boat' };
 
 /** Owns everything visual that lives between frames: traffic, people, animations and hit areas. */
+const BUBBLE_MS = 3800;
+const BUBBLE_EVERY_MS = 3200;
+
 export class CityRenderer {
   readonly traffic = new Traffic();
   readonly people = new People();
@@ -230,6 +235,10 @@ export class CityRenderer {
   private lights: CanvasRenderingContext2D | null = null;
   /** Screen-space rectangles of tappable pickups from the last frame. */
   private bagRect: [number, number, number, number] | null = null;
+  private boatRects: [number, number, number, number][] = [];
+  /** Speech bubbles above buildings. */
+  private bubbles: { plot: number; text: string; born: number }[] = [];
+  private nextBubble = 0;
   private briefcaseRect: [number, number, number, number] | null = null;
 
   private lightLayer(w: number, h: number): CanvasRenderingContext2D {
@@ -252,6 +261,7 @@ export class CityRenderer {
     const inRect = (r: [number, number, number, number] | null) => !!r && sx >= r[0] && sx <= r[0] + r[2] && sy >= r[1] && sy <= r[1] + r[3];
     if (inRect(this.briefcaseRect)) return { kind: 'briefcase' };
     if (inRect(this.bagRect)) return { kind: 'bag' };
+    if (this.boatRects.some((r) => inRect(r))) return { kind: 'boat' };
     const wx = screenToWorldX(cam, sx);
     const wy = (sy - groundScreenY(cam)) / cam.zoom;
     const scale = spriteScale(dpr, cam.zoom);
@@ -264,6 +274,23 @@ export class CityRenderer {
     return null;
   }
 
+  private updateBubbles(shown: Shown[], now: number, eventId: EventId | null): void {
+    this.bubbles = this.bubbles.filter((b) => now - b.born < BUBBLE_MS);
+    if (now < this.nextBubble) return;
+    this.nextBubble = now + BUBBLE_EVERY_MS * (0.7 + Math.random() * 0.6);
+    const candidates = shown.filter((x) => x.b && x.s && !this.bubbles.some((b) => b.plot === x.p.index));
+    if (!candidates.length) return;
+    const c = candidates[Math.floor(Math.random() * candidates.length)]!;
+    const pool = eventId && Math.random() < 0.5 ? BUBBLES.events[eventId] : BUBBLES[c.b!.category];
+    this.bubbles.push({ plot: c.p.index, text: pool[Math.floor(Math.random() * pool.length)]!, born: now });
+  }
+
+  /** Forget everything from the previous run (after Flee to Canada). */
+  reset(): void {
+    this.effects.clear();
+    this.bubbles = [];
+  }
+
   /** District under the middle of the screen (for the HUD). */
   districtInView(state: GameState, cam: Camera): number {
     return districtAtX(state, cam.x + cam.viewW / cam.zoom / 2);
@@ -273,6 +300,8 @@ export class CityRenderer {
     // clamp the step: a tab coming back from the background must not teleport the traffic
     const dt = this.lastNow ? Math.min(0.05, Math.max(0, (nowMs - this.lastNow) / 1000)) : 0;
     const simNow = state.lastSimTime;
+    const ev = state.event && state.event.until > simNow ? state.event : null;
+    const isDark = (id: number) => ev?.id === 'loadShedding' && !!ev.dark?.includes(id) && !state.generators.includes(id);
     this.lastNow = nowMs;
     const light = lightingAt(dayPhase(nowMs));
     const gy = groundScreenY(cam);
@@ -338,6 +367,14 @@ export class CityRenderer {
     const price = formatTaka(plotCost(state));
     const drawPlots = (c: Ctx, list: Shown[], shadows: boolean) => {
       for (const { p, b, s, fx } of list) {
+        if (state.sideBiz?.plot === p.index && !b) {
+          c.save();
+          rowTransform(c, p);
+          if (state.sideBiz.kind === 'parking') drawParking(c, plotCenter(p), STRINGS.art.parking);
+          else drawCylinders(c, plotCenter(p), STRINGS.art.cylinder);
+          c.restore();
+          continue;
+        }
         if (b && s) {
           if (shadows) {
             c.save();
@@ -346,6 +383,19 @@ export class CityRenderer {
             c.restore();
           }
           blit(c, s.canvas, p, s, fx);
+          if (shadows && isDark(p.index)) {
+            c.save();
+            rowTransform(c, p);
+            c.fillStyle = 'rgba(30,32,60,0.38)';
+            c.fillRect(plotCenter(p) - 66, -s.height, 132, s.height);
+            c.restore();
+          }
+          if (shadows && state.generators.includes(p.index)) {
+            c.save();
+            rowTransform(c, p);
+            drawGenerator(c, plotCenter(p) + 58);
+            c.restore();
+          }
           continue;
         }
         c.save();
@@ -399,8 +449,17 @@ export class CityRenderer {
         const b = plotById(state, i)?.building;
         return b ? getSprite(state.seed, i, b, scale).height : 60;
       });
+      if (ev?.id === 'monsoon') drawFlood(c, viewL, viewR, roadTop + 20, timeSec);
       drawPoles(c, poles, state.seed);
       posters(c);
+      if (ev?.id === 'election') for (let i = 0; i + 1 < poles.length; i++) drawBunting(c, poles[i]!, poles[i + 1]!, -138);
+      if (ev?.id === 'ramadan' && light.twilight + light.night > 0.3) for (const x of poles) drawLantern(c, x + 10, -84);
+      if (ev?.id === 'vip') drawBarricade(c, cam.x + cam.viewW / cam.zoom / 2, farY, STRINGS.art.vipRoute);
+      if (ev?.id === 'journalist') drawJournalist(c, cam.x + cam.viewW / cam.zoom * 0.62, timeSec);
+      for (const id of state.frontage) {
+        const fp = plotById(state, id);
+        if (fp && fp.row === 'front') drawFlyoverSign(c, plotCenter(fp) - PLOT_W / 2 + 10, STRINGS.art.flyoverSign);
+      }
       this.people.draw(c, viewL, viewR);
       this.traffic.draw(c, scale, viewL, viewR, farY, nearY, timeSec, poster);
     };
@@ -417,7 +476,7 @@ export class CityRenderer {
 
     // dusk and night: tint everything, then lights on top
     drawTint(ctx, cam.viewW, cam.viewH, light);
-    if (light.night > 0.02) {
+    if (light.night > 0.02 && ctx.canvas.width > 0 && ctx.canvas.height > 0) {
       // Lights are composed back to front in their own layer: each light source is drawn, then
       // everything standing in front of it is erased, so nothing glows through a pole or a person.
       const base = ctx.getTransform();
@@ -429,7 +488,7 @@ export class CityRenderer {
       const lightsOf = (list: Shown[]) => {
         L.globalCompositeOperation = 'source-over';
         for (const { p, s, fx } of list) {
-          if (!s) continue;
+          if (!s || isDark(p.index)) continue;
           const lights = spriteLights(s);
           if (lights) blit(L, lights, p, s, fx);
         }
@@ -461,6 +520,7 @@ export class CityRenderer {
     // labels, chips and pickups stay readable at night, so they go on last
     this.bagRect = null;
     this.briefcaseRect = null;
+    this.boatRects = [];
     ctx.save();
     world(ctx);
     for (const { p, b, s } of shown) {
@@ -513,6 +573,33 @@ export class CityRenderer {
         const ay = -top - 18 + bob;
         poly(ctx, [cx - 10, ay - 12, cx + 10, ay - 12, cx, ay], '#d6336c');
         ctx.restore();
+      }
+    }
+    ctx.restore();
+
+    // speech bubbles, mosquitoes and boats
+    this.updateBubbles(shown, nowMs, ev?.id ?? null);
+    ctx.save();
+    world(ctx);
+    for (const bub of this.bubbles) {
+      const entry = shown.find((x) => x.p.index === bub.plot);
+      if (!entry?.s) continue;
+      const k = entry.p.row === 'back' ? BACK_SCALE : 1;
+      const top = (entry.p.row === 'back' ? BACK_Y : 0) - entry.s.height * k;
+      const age = (nowMs - bub.born) / BUBBLE_MS;
+      drawBubble(ctx, plotCenter(entry.p) - 20, top - 30, bub.text, age < 0.85 ? 1 : (1 - age) / 0.15);
+    }
+    if (ev?.id === 'dengue') {
+      for (const { p, s } of shown) if (p.building?.category === 'healthcare' && s) drawMosquitoes(ctx, plotCenter(p), -s.height, timeSec);
+    }
+    if (ev?.id === 'monsoon' && (ev.boats ?? 0) < EVENT_TUNING.boatsPerMonsoon) {
+      const span = cam.viewW / cam.zoom;
+      for (let i = 0; i < 2; i++) {
+        const bx = cam.x + ((timeSec * 26 + i * span * 0.55) % (span + 80)) - 40;
+        const by = nearY - 10 + Math.sin(timeSec * 2 + i) * 3;
+        drawBoat(ctx, bx, by);
+        const sx = (bx - cam.x) * cam.zoom, sy = gy + by * cam.zoom;
+        this.boatRects.push([sx - 24 * cam.zoom, sy - 50 * cam.zoom, 48 * cam.zoom, 54 * cam.zoom]);
       }
     }
     ctx.restore();

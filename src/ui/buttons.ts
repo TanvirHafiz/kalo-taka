@@ -3,7 +3,7 @@
 import { STRINGS, fmt } from '../config/strings';
 
 export interface ButtonRow {
-  setFleeVisible(v: boolean): void;
+  setFleeVisible(v: boolean, pulse: boolean): void;
 }
 
 const ICON: Record<string, string> = {
@@ -22,7 +22,7 @@ export function createButtonRow(root: HTMLElement, handlers: Partial<Record<stri
     ['build', STRINGS.buttons.build, true],
     ['posters', STRINGS.buttons.posters, true],
     ['nephews', STRINGS.buttons.nephews, true],
-    ['flee', STRINGS.buttons.flee, false],
+    ['flee', STRINGS.buttons.flee, true],
     ['settings', STRINGS.buttons.settings, false],
   ];
   el.innerHTML = items
@@ -38,8 +38,9 @@ export function createButtonRow(root: HTMLElement, handlers: Partial<Record<stri
   });
   const flee = el.querySelector<HTMLButtonElement>('[data-k="flee"]')!;
   return {
-    setFleeVisible(v) {
+    setFleeVisible(v, pulse) {
       flee.hidden = !v;
+      flee.classList.toggle('pulse', v && pulse);
     },
   };
 }

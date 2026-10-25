@@ -222,3 +222,29 @@ describe('save v4 -> v5', () => {
     expect(s.event).toBeNull();
   });
 });
+
+describe('advisor fixes', () => {
+  it('Prado "pay" charges the shown price once', () => {
+    const s0 = startEvent(city({ 0: H(3, 5) }, 1e9), 'prado', T0);
+    expect(canChoose(s0, 'pay')).toBeNull();
+    const r = applyAction(s0, { type: 'eventChoice', choice: 'pay' });
+    expect(r.error).toBeUndefined();
+    const price = Math.ceil(baseIncome(s0) * T.pradoSeconds);
+    expect(Math.abs(s0.taka - r.state.taka - price)).toBeLessThan(price * 0.01 + 2);
+  });
+
+  it('the tutorial is done once its closing line shows, and never outlasts its cap', () => {
+    const s = { ...createInitialState(3, T0), tutorial: { step: 6, done: false, since: 0 } };
+    const merged = { ...s, plots: s.plots.map((p, i) => (i === 0 ? { ...p, owned: true, building: H(2) } : p)) };
+    const r = advanceTutorial(merged);
+    expect(r.tutorial).toMatchObject({ step: 7, done: true });
+    const late = advanceTutorial({ ...s, tutorial: { step: 2, done: false, since: 0 }, runPlayMs: 60 * 60_000 });
+    expect(late.tutorial.done).toBe(true);
+  });
+
+  it('VIP visits need a tier 5 in this run', () => {
+    const s = city({ 0: H(1) });
+    expect(eventUnlocked({ ...s, milestones: { ...s.milestones, firstTier5: true } }, 'vip')).toBe(false);
+    expect(eventUnlocked(city({ 0: H(5) }), 'vip')).toBe(true);
+  });
+});

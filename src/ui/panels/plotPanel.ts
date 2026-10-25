@@ -1,13 +1,14 @@
 // Slide-up card for the selected plot. Buttons are keyed by id and updated in place,
 // so refreshing four times a second never swallows a click.
 import { BALANCE, CORRUPTION } from '../../config/balance';
-import { BUILDINGS, CATEGORIES, UNLOCK_HOUSING_TIER } from '../../config/buildings';
+import { BUILDINGS, CATEGORIES } from '../../config/buildings';
 import { STRINGS, errorText, fmt, type ErrorKey } from '../../config/strings';
 import { buildingSeed } from '../../render/buildings/cache';
-import { canBuild, canBuyPlot, canGrab, canInquiry, canMerge, canSpeedMoney, canUpgrade, upgradePlan } from '../../sim/actions';
+import { canBuild, canBuyPlot, canEvict, canGrab, canInquiry, canMerge, canSpeedMoney, canUpgrade, evictRefund, upgradePlan } from '../../sim/actions';
 import { inquiryCost, isFrozen, speedMoneyCost, waterPumpCost } from '../../sim/corruption';
 import { buildCost, neighbourBonus, patients, plotCost, plotIncome, tierDef } from '../../sim/economy';
 import { plotById } from '../../sim/layout';
+import { unlockTier } from '../../sim/prestige';
 import { mergeFee, mergePartners } from '../../sim/merge';
 import type { Action, GameState, UpgradeCount } from '../../state/types';
 import { formatRate, formatTaka } from '../../util/money';
@@ -20,6 +21,8 @@ interface ButtonSpec {
   error: ErrorKey | null;
   /** Shown instead of the error text when disabled for a non-error reason (locked category). */
   note?: string;
+  /** Destructive: the first tap arms the button and shows this label, the second tap acts. */
+  confirm?: string;
   action: Action;
 }
 
@@ -84,7 +87,7 @@ function viewFor(state: GameState, id: number, count: UpgradeCount): View {
       buttons: CATEGORIES.map((category) => {
         const unlocked = state.unlocked.includes(category);
         const t1 = BUILDINGS[category][0]!;
-        const needed = BUILDINGS.housing[UNLOCK_HOUSING_TIER[category] - 1]?.name ?? '';
+        const needed = BUILDINGS.housing[unlockTier(state, category) - 1]?.name ?? '';
         return {
           id: `build-${category}`,
           label: fmt(STRINGS.plot.build, { name: t1.name }),
@@ -153,7 +156,15 @@ function viewFor(state: GameState, id: number, count: UpgradeCount): View {
     const o = plotById(state, other)!;
     buttons.push({ id: `merge-${other}`, label: fmt(STRINGS.plot.merge, { n: o.slot + 1 }), cost: mergeFee(b), error: canMerge(state, id, other), action: { type: 'merge', a: id, b: other } });
   }
-  if (!partners.length) lines.push(STRINGS.plot.mergeHint);
+  if (!partners.length) lines.push(b.level >= BALANCE.maxLevel ? `${STRINGS.plot.mergeHint}. ${STRINGS.plot.evictHint}` : STRINGS.plot.mergeHint);
+  buttons.push({
+    id: 'evict',
+    label: STRINGS.plot.evict,
+    note: fmt(STRINGS.plot.evictNote, { refund: formatTaka(evictRefund(state, id)) }),
+    confirm: STRINGS.plot.evictConfirm,
+    error: canEvict(state, id),
+    action: { type: 'evict', plot: id },
+  });
   return {
     title: tierDef(b.category, b.tier)?.name ?? '?',
     subtitle: buildingName(buildingSeed(state.seed, id, b), b.category),
@@ -182,7 +193,9 @@ export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void
   const linesEl = el.querySelector<HTMLElement>('.panel-lines')!;
   const toggleEl = el.querySelector<HTMLElement>('.buy-toggle')!;
   const buttonsEl = el.querySelector<HTMLElement>('.panel-buttons')!;
-  const actions = new Map<string, Action>();
+  const actions = new Map<string, ButtonSpec>();
+  // the armed destructive button and when its second tap expires
+  let armed: { id: string; until: number } | null = null;
   let selected: number | null = null;
   let countKey = 'x1';
   let last: GameState | null = null;
@@ -195,8 +208,15 @@ export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void
   el.querySelector('.panel-close')!.addEventListener('click', () => panel.close());
   buttonsEl.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('button');
-    const action = btn && actions.get(btn.dataset.id ?? '');
-    if (btn && action && !btn.disabled) dispatch(action);
+    const spec = btn && actions.get(btn.dataset.id ?? '');
+    if (!btn || !spec || btn.disabled) return;
+    if (spec.confirm && (armed?.id !== spec.id || performance.now() > armed.until)) {
+      armed = { id: spec.id, until: performance.now() + CORRUPTION.evictConfirmMs };
+      if (last) panel.update(last);
+      return;
+    }
+    armed = null;
+    dispatch(spec.action);
   });
   toggleEl.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-count]');
@@ -215,6 +235,7 @@ export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void
       return selected;
     },
     open(plot) {
+      if (plot !== selected) armed = null;
       selected = plot;
       el.classList.add('open');
       el.setAttribute('aria-hidden', 'false');
@@ -259,8 +280,11 @@ export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void
           btn.innerHTML = '<span class="btn-text"><span class="btn-label"></span><span class="btn-note"></span></span><span class="btn-cost"></span>';
         }
         if (buttonsEl.children[idx] !== btn) buttonsEl.insertBefore(btn, buttonsEl.children[idx] ?? null);
-        actions.set(spec.id, spec.action);
-        btn.querySelector('.btn-label')!.textContent = spec.label;
+        actions.set(spec.id, spec);
+        const isArmed = !!spec.confirm && armed?.id === spec.id && performance.now() <= armed.until;
+        btn.classList.toggle('armed', isArmed);
+        btn.classList.toggle('danger', !!spec.confirm);
+        btn.querySelector('.btn-label')!.textContent = isArmed ? spec.confirm! : spec.label;
         btn.querySelector('.btn-note')!.textContent = spec.note ?? '';
         btn.querySelector('.btn-cost')!.textContent = spec.cost !== undefined ? formatTaka(spec.cost) : '';
         btn.disabled = spec.error !== null;

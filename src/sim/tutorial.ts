@@ -1,14 +1,12 @@
 // The 90-second guided start. Manager Mamun's "starter loan" covers exactly the scripted step's
 // cost (never anything else, never counted as earnings), and permits clear at once until it ends.
-import { BALANCE } from '../config/balance';
+import { BALANCE, TUTORIAL } from '../config/balance';
 import type { GameState, SimEvent } from '../state/types';
 import { buildCost, plotCost, plotsOwned, upgradeCost } from './economy';
 import { mergeFee } from './merge';
 
 /** Step 7 is the closing line; after it the tutorial is done. */
 export const TUTORIAL_LAST = 7;
-/** Step 1 waits this long for the player to watch the money tick. */
-const WATCH_MS = 5000;
 
 const withEvent = (s: GameState, e: SimEvent): GameState => ({ ...s, events: [...s.events, e] });
 
@@ -40,7 +38,7 @@ function done(state: GameState, step: number, since: number): boolean {
   const sheds = tinSheds(state);
   switch (step) {
     case 0: return state.plots.some((p) => p.building || p.job?.kind === 'build');
-    case 1: return state.runPlayMs - since >= WATCH_MS;
+    case 1: return state.runPlayMs - since >= TUTORIAL.watchMs;
     case 2: return state.plots.some((p) => (p.building?.level ?? 0) >= 2 || p.job?.kind === 'upgrade');
     case 3: return plotsOwned(state) >= 2;
     case 4: return sheds.length >= 2;
@@ -54,10 +52,11 @@ function done(state: GameState, step: number, since: number): boolean {
 export function advanceTutorial(state: GameState): GameState {
   const t = state.tutorial;
   if (t.done) return state;
-  if (t.step >= TUTORIAL_LAST) return state;
+  if (state.runPlayMs >= TUTORIAL.maxPlayMs || t.step >= TUTORIAL_LAST) return endTutorial(state);
   if (!done(state, t.step, t.since ?? 0)) return state;
   const step = t.step + 1;
-  let s: GameState = { ...state, tutorial: { ...t, step, since: state.runPlayMs } };
+  // the closing line is only a farewell, so the tutorial is over once it shows
+  let s: GameState = { ...state, tutorial: { ...t, step, since: state.runPlayMs, done: step >= TUTORIAL_LAST } };
   const loan = loanFor(s, step);
   if (loan > 0) s = withEvent({ ...s, taka: s.taka + loan }, { kind: 'loan', amount: loan });
   return withEvent(s, { kind: 'tutorial', step });

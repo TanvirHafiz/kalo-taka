@@ -3,13 +3,17 @@ import '@fontsource/baloo-2/latin-700.css';
 import '@fontsource/baloo-2/latin-800.css';
 import './style.css';
 import { BALANCE } from './config/balance';
-import { STRINGS, errorText, fmt } from './config/strings';
+import { EVENT_TEXT, FLEE, MAMUN, STRINGS, TICKER, errorText, fmt } from './config/strings';
 import { clearSpriteCache } from './render/buildings/cache';
 import { ZOOM_MAX, ZOOM_MIN, createCamera, clampCamera, clampCameraY, screenToWorldX } from './render/camera';
 import { CityRenderer, fitZoom, maxPanY, plotCenter, worldWidth } from './render/city';
 import { clearSceneCache } from './render/scene';
 import { DISTRICTS } from './config/buildings';
-import { applyAction, bagValue } from './sim/actions';
+import { applyAction, bagValue, evictRefund } from './sim/actions';
+import { EVENT_CHOICES, canChoose, choiceCost, freeLotFor } from './sim/events';
+import { offlineCatchUp } from './sim/offline';
+import { fleeAvailable, fleePulses } from './sim/prestige';
+import { TUTORIAL_LAST } from './sim/tutorial';
 import { NEPHEW_IDS, nephewUnlocked } from './sim/corruption';
 import { districtCount, hasBackRow, plotById } from './sim/layout';
 import { tierDef } from './sim/economy';
@@ -19,8 +23,11 @@ import { loadGame, saveGame } from './state/save';
 import type { Action, GameState } from './state/types';
 import { addGrain } from './ui/grain';
 import { createButtonRow } from './ui/buttons';
+import { playCutscene } from './ui/cutscene';
+import { createMamun, type MamunButton } from './ui/mamun';
+import { createTicker } from './ui/ticker';
 import { createHud } from './ui/hud';
-import { nephewsView, postersView } from './ui/panels/corruptionSheets';
+import { fleeView, nephewsView, postersView } from './ui/panels/corruptionSheets';
 import { createPlotPanel } from './ui/panels/plotPanel';
 import { createSheet } from './ui/panels/sheet';
 import { initToasts, showToast } from './ui/toasts';
@@ -42,14 +49,19 @@ const hud = createHud(overlay);
 const panel = createPlotPanel(overlay, dispatch);
 const cam = createCamera();
 const city = new CityRenderer();
+const ticker = createTicker(overlay);
+const mamun = createMamun(overlay, dispatch, () => {
+  if (!state.tutorial.done) sayTutorial(state.tutorial.step);
+  else sayEvent();
+});
 
 // --- State ---------------------------------------------------------------
 let state: GameState;
 const loaded = loadGame(localStorage);
 if (loaded.kind === 'loaded') {
-  // Closed-game offline earnings arrive in M5. Until then, resume from now.
+  // the game was closed: earn at the offline rate up to the cap, then resume from now
   const now = Date.now();
-  state = { ...loaded.state, lastSimTime: now };
+  state = offlineCatchUp(loaded.state, now);
   // an overdue briefcase would flash by behind the title card; give the player a minute first
   if (state.nextBriefcaseAt < now) state = { ...state, nextBriefcaseAt: now + 60_000 };
 } else {
@@ -84,17 +96,36 @@ function drainEvents(): void {
     if (e.kind === 'built') {
       city.effects.build(e.plot, now);
       const b = plotById(state, e.plot)?.building;
-      if (b) showToast(fmt(STRINGS.toasts.built, { name: tierDef(b.category, b.tier)?.name ?? '' }));
+      if (b) {
+        showToast(fmt(STRINGS.toasts.built, { name: tierDef(b.category, b.tier)?.name ?? '' }));
+        ticker.push(TICKER.built, { building: tierDef(b.category, b.tier)?.name ?? '' });
+      }
     } else if (e.kind === 'upgraded') city.effects.upgrade(e.plot, now);
     else if (e.kind === 'merged') {
       city.effects.merge(e.left, e.right, e.oldLeft, e.oldRight, now);
       const b = plotById(state, e.left)?.building;
-      if (b) showToast(fmt(STRINGS.toasts.merged, { name: tierDef(b.category, b.tier)?.name ?? '' }));
+      if (b) {
+        showToast(fmt(STRINGS.toasts.merged, { name: tierDef(b.category, b.tier)?.name ?? '' }));
+        ticker.push(TICKER.merged, { building: tierDef(b.category, b.tier)?.name ?? '' });
+      }
     } else if (e.kind === 'inquiry') {
       const b = plotById(state, e.plot)?.building;
-      showToast(fmt(STRINGS.toasts.inquiry, { name: b ? (tierDef(b.category, b.tier)?.name ?? '') : '' }));
-    } else if (e.kind === 'inquiryOver') showToast(STRINGS.toasts.inquiryOver);
-    else if (e.kind === 'leak') showToast(STRINGS.toasts.leaked);
+      const name = b ? (tierDef(b.category, b.tier)?.name ?? '') : '';
+      showToast(fmt(STRINGS.toasts.inquiry, { name }));
+      ticker.push(TICKER.inquiry, { building: name });
+    } else if (e.kind === 'inquiryOver') {
+      showToast(STRINGS.toasts.inquiryOver);
+      ticker.push(TICKER.inquiryOver);
+    } else if (e.kind === 'leak') showToast(STRINGS.toasts.leaked);
+    else if (e.kind === 'eventStart') {
+      ticker.push(TICKER.events[e.id]);
+      sayEvent();
+    } else if (e.kind === 'eventEnd') mamun.dismiss(`event-${e.id}`);
+    else if (e.kind === 'offline') {
+      mamun.say({ key: 'offline', text: fmt(MAMUN.offline, { amount: formatTaka(e.gross) }), buttons: [{ label: MAMUN.next, run: () => mamun.dismiss('offline') }] });
+    } else if (e.kind === 'tutorial') sayTutorial(e.step);
+    else if (e.kind === 'loan') showToast(MAMUN.loan);
+    else if (e.kind === 'fled') fled(e.stars);
   }
   state = { ...state, events: [] };
 }
@@ -102,30 +133,50 @@ function drainEvents(): void {
 /** Nephews already asking for a job, so each one is announced once. */
 const knownNephews = new Set(NEPHEW_IDS.filter((id) => nephewUnlocked(state, id)));
 
-function dispatch(action: Action): void {
+/** Apply a player action; false if it was refused (the reason is toasted). */
+function dispatch(action: Action): boolean {
   // snapshot first: after a merge the right plot is empty, but the animation needs both buildings
   const before = state;
   const bag = before.bag ? { kind: before.bag.kind, value: bagValue(before) } : null;
+  const evicted = action.type === 'evict' ? { plot: action.plot, refund: evictRefund(before, action.plot), b: plotById(before, action.plot)?.building } : null;
   const result = applyAction(state, action);
   if (result.error) {
     showToast(errorText(result.error));
-    return;
+    return false;
   }
   state = result.state;
   if (action.type === 'collectBag' && bag) showToast(fmt(STRINGS.bags.collected, { kind: STRINGS.bags[bag.kind], amount: formatTaka(bag.value) }));
   else if (action.type === 'collectBriefcase') showToast(STRINGS.toasts.briefcase);
-  else if (action.type === 'speedMoney') showToast(STRINGS.toasts.speedPaid);
+  else if (action.type === 'speedMoney') {
+    showToast(STRINGS.toasts.speedPaid);
+    ticker.push(TICKER.speed);
+  }
   else if (action.type === 'grab') {
     const pond = plotById(state, action.plot)?.job?.pond ?? 0;
     showToast(fmt(STRINGS.toasts.grabbed, { pond: STRINGS.grab.ponds[pond] ?? '' }));
-  } else if (action.type === 'poster') showToast(STRINGS.toasts.poster);
-  else if (action.type === 'payJournalists') showToast(STRINGS.toasts.journalists);
-  else if (action.type === 'hire') showToast(fmt(STRINGS.toasts.hired, { name: STRINGS.nephews.names[action.id] }));
+    ticker.push(TICKER.grabbed);
+  } else if (action.type === 'poster') {
+    showToast(STRINGS.toasts.poster);
+    ticker.push(TICKER.poster);
+  } else if (action.type === 'eventChoice' && action.choice === 'spree') {
+    postersSheet.open();
+    postersSheet.update(state);
+  }
+  else if (evicted) {
+    city.effects.evict(evicted.plot, Date.now());
+    showToast(fmt(STRINGS.toasts.evicted, { refund: formatTaka(evicted.refund) }));
+    ticker.push(TICKER.evicted, { building: evicted.b ? (tierDef(evicted.b.category, evicted.b.tier)?.name ?? '') : '' });
+  } else if (action.type === 'payJournalists') showToast(STRINGS.toasts.journalists);
+  else if (action.type === 'hire') {
+    showToast(fmt(STRINGS.toasts.hired, { name: STRINGS.nephews.names[action.id] }));
+    ticker.push(TICKER.nephew, { nephew: STRINGS.nephews.names[action.id] });
+  }
   else if (action.type === 'fire') showToast(STRINGS.toasts.fired);
   drainEvents();
   announce(before, state);
   panel.update(state);
   hud.update(state, city.districtInView(state, cam));
+  return true;
 }
 
 /** Build button: open the selected empty plot, or the first empty plot you own. */
@@ -147,12 +198,18 @@ function openBuild(): void {
 }
 const postersSheet = createSheet(overlay, postersView, dispatch, () => closeAll());
 const nephewsSheet = createSheet(overlay, nephewsView, dispatch, () => closeAll());
+const fleeSheet = createSheet(overlay, fleeView, dispatch, () => closeAll());
 function closeAll(): void {
   panel.close();
   postersSheet.close();
   nephewsSheet.close();
+  fleeSheet.close();
 }
-createButtonRow(overlay, {
+const buttons = createButtonRow(overlay, {
+  flee: () => {
+    fleeSheet.open();
+    fleeSheet.update(state);
+  },
   build: openBuild,
   posters: () => {
     postersSheet.open();
@@ -256,9 +313,11 @@ function endPointer(e: PointerEvent, tap: boolean): void {
   if (!hit) panel.close();
   else if (hit.kind === 'bag') dispatch({ type: 'collectBag' });
   else if (hit.kind === 'briefcase') dispatch({ type: 'collectBriefcase' });
+  else if (hit.kind === 'boat') dispatch({ type: 'eventChoice', choice: 'boat' });
   else {
     postersSheet.close();
     nephewsSheet.close();
+    fleeSheet.close();
     panel.open(hit.plot);
     panel.update(state);
   }
@@ -283,8 +342,13 @@ window.addEventListener('keydown', (e) => {
 // --- Loop ------------------------------------------------------------------
 const bootTime = performance.now();
 let lastUiUpdate = 0;
+let lastFrame = Date.now();
+const IDLE_MS = 100_000;
+let idleIn = IDLE_MS;
 function frame(): void {
   const now = Date.now();
+  const dtUi = Math.min(1000, now - lastFrame);
+  lastFrame = now;
   const before = state;
   const r = advance(state, now);
   state = r.state;
@@ -302,6 +366,16 @@ function frame(): void {
     panel.update(state);
     postersSheet.update(state);
     nephewsSheet.update(state);
+    fleeSheet.update(state);
+    buttons.setFleeVisible(fleeAvailable(state), fleePulses(state));
+    mamun.refresh(mamunButtons);
+  }
+  ticker.update(dtUi, tickerDefaults());
+  mamun.tick(dtUi);
+  idleIn -= dtUi;
+  if (idleIn <= 0) {
+    idleIn = IDLE_MS;
+    if (!mamun.current() && state.tutorial.done) mamun.say({ key: 'idle', text: pick(MAMUN.idle), buttons: [], ttl: 9000 });
   }
   city.frame(ctx, state, cam, panel.selected, dpr, now, (performance.now() - bootTime) / 1000);
   requestAnimationFrame(frame);
@@ -322,6 +396,73 @@ Promise.all(['600', '700', '800'].map((w) => document.fonts.load(`${w} 16px "Bal
   })
   .catch(() => undefined);
 
+// --- Manager Mamun, the ticker, the tutorial and fleeing ---------------------
+function pick<T>(a: readonly T[]): T {
+  return a[Math.floor(Math.random() * a.length)]!;
+}
+
+/** Values for the ticker's {building} {district} {amount} {nephew} slots. */
+function tickerDefaults(): Record<string, string> {
+  const built = state.plots.filter((p) => p.building);
+  const b = built.length ? pick(built).building! : null;
+  return {
+    building: b ? (tierDef(b.category, b.tier)?.name ?? '') : STRINGS.title,
+    district: DISTRICTS[city.districtInView(state, cam)]?.name ?? DISTRICTS[0]!.name,
+    amount: formatTaka(state.lifetimeEarnings),
+    nephew: STRINGS.nephews.names.rony,
+  };
+}
+
+/** Response buttons for an event popup, with live costs; null for other messages. */
+function mamunButtons(key: string): MamunButton[] | null {
+  if (!key.startsWith('event-') || !state.event) return null;
+  const buttons: MamunButton[] = EVENT_CHOICES[state.event.id].map((choice) => {
+    const plot = choice === 'parking' || choice === 'cylinder' ? (freeLotFor(state) ?? undefined) : undefined;
+    const cost = choiceCost(state, choice);
+    // boats are tapped on the street, so the popup only points at them
+    if (choice === 'boat') return { label: EVENT_TEXT.choices.boats, run: () => mamun.dismiss(key) };
+    const b: MamunButton = {
+      label: EVENT_TEXT.choices[choice as keyof typeof EVENT_TEXT.choices] ?? choice,
+      disabled: canChoose(state, choice, plot) !== null,
+      action: plot !== undefined ? { type: 'eventChoice', choice, plot } : { type: 'eventChoice', choice },
+      run: () => mamun.dismiss(key),
+    };
+    if (cost > 0) b.cost = cost;
+    return b;
+  });
+  buttons.push({ label: EVENT_TEXT.choices.later, run: () => mamun.dismiss(key) });
+  return buttons;
+}
+
+function sayTutorial(step: number): void {
+  const close = () => mamun.dismiss('tutorial');
+  mamun.say({
+    key: 'tutorial',
+    text: MAMUN.tutorial[step] ?? '',
+    buttons: [step >= TUTORIAL_LAST ? { label: MAMUN.next, run: close } : { label: MAMUN.skip, action: { type: 'skipTutorial' }, run: close }],
+  });
+}
+
+/** Pop up the running event's choices (again), unless it has already been answered. */
+function sayEvent(): void {
+  const e = state.event;
+  if (!e || e.until <= state.lastSimTime || e.choice) return;
+  const key = `event-${e.id}`;
+  mamun.say({ key, text: MAMUN.events[e.id], buttons: mamunButtons(key) ?? [] });
+}
+
+/** A new run: play the airport cutscene and start the city view from scratch. */
+function fled(stars: number): void {
+  closeAll();
+  mamun.clear();
+  playCutscene(overlay, state.seed, state.stars, () => showToast(fmt(FLEE.toast, { n: String(stars) })));
+  city.reset();
+  cam.x = 0;
+  cam.y = 0;
+  knownNephews.clear();
+  for (const id of NEPHEW_IDS) if (nephewUnlocked(state, id)) knownNephews.add(id);
+}
+
 // --- Title card --------------------------------------------------------------
 const splash = document.createElement('div');
 splash.className = 'splash';
@@ -335,4 +476,7 @@ overlay.appendChild(splash);
 splash.querySelector('button')!.focus();
 
 hud.update(state, 0);
+drainEvents();
+if (!state.tutorial.done) sayTutorial(state.tutorial.step);
+else sayEvent();
 requestAnimationFrame(frame);

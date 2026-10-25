@@ -6,7 +6,7 @@ import {
   addHeat, addInfluence, completeJob, endInquiry, inquiryCost, journalistCost, isFrozen, newJob, nephewHireCost, nephewTrainCost, nephewUnlocked,
   permitSeconds, posterCost, rollLeak, speedMoneyCost, waterPumpCost,
 } from './corruption';
-import { buildCost, plotCost, plotIncome, upgradeCost } from './economy';
+import { buildCost, plotCost, plotIncome, tierDef, upgradeCost, upgradeCostN } from './economy';
 import { leftOf, plotById } from './layout';
 import { mergeBlocker, mergeFee } from './merge';
 import { applyChoice, canChoose } from './events';
@@ -97,6 +97,24 @@ export function canSpeedMoney(state: GameState, plot: number): ErrorKey | null {
   if (!job || job.kind === 'fill' || (job.kind === 'merge' && !job.result)) return 'noPermit';
   if (isFrozen(state, plot)) return 'frozen';
   if (state.taka < speedMoneyCost(state, plot)) return 'notEnoughTaka';
+  return null;
+}
+
+/** Taka back from an eviction drive: a share of the tier's base cost plus the upgrades paid for. */
+export function evictRefund(state: GameState, plot: number): number {
+  const b = plotById(state, plot)?.building;
+  if (!b) return 0;
+  const paid = (tierDef(b.category, b.tier)?.baseCost ?? 0) + upgradeCostN({ ...b, level: 1 }, b.level - 1);
+  return Math.floor(paid * CORRUPTION.evictRefund);
+}
+
+export function canEvict(state: GameState, plot: number): ErrorKey | null {
+  const p = plotById(state, plot);
+  if (!p) return 'noSuchPlot';
+  if (!p.building) return 'plotEmpty';
+  if (p.job) return 'permitPending';
+  if (isFrozen(state, plot)) return 'frozen';
+  if (!state.tutorial.done) return 'tutorialRunning';
   return null;
 }
 
@@ -239,6 +257,18 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       const error = canFlee(state, action.destination);
       if (error) return { state, error };
       return { state: flee(state, action.destination, now) };
+    }
+    case 'evict': {
+      const error = canEvict(state, action.plot);
+      if (error) return { state, error };
+      const housing = plotById(state, action.plot)!.building!.category === 'housing';
+      let s = withPlot(state, action.plot, { building: null }, evictRefund(state, action.plot));
+      s = housing
+        ? addHeat(s, CORRUPTION.evictMediaHousing, CORRUPTION.evictAngerHousing, CORRUPTION.evictCommittee)
+        : addHeat(s, CORRUPTION.evictMediaOther, CORRUPTION.evictAngerOther, CORRUPTION.evictCommittee);
+      // a bag sitting on the bulldozed building goes with it
+      if (s.bag?.plot === action.plot) s = scheduleBag({ ...s, bag: null }, now);
+      return { state: s };
     }
     case 'skipTutorial':
       return { state: endTutorial(state) };

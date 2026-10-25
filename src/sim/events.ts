@@ -32,7 +32,7 @@ export function eventUnlocked(state: GameState, id: EventId): boolean {
     case 'gas':
       return housing >= T.housingForRentEvents;
     case 'vip':
-      return state.milestones.firstTier5;
+      return built.some((p) => p.building!.tier >= 5);
     case 'journalist':
       return state.heat.media > T.journalistAtMedia;
     case 'prado':
@@ -140,6 +140,7 @@ export function choiceCost(state: GameState, choice: string): number {
     const need = (e.dark ?? []).filter((pid) => !state.generators.includes(pid));
     return Math.max(CORRUPTION.minPrice, Math.ceil(need.reduce((t, pid) => t + plotIncome(state, pid, false, false), 0) * T.generatorSeconds));
   }
+  if (choice === 'pay') return incomeSeconds(state, T.pradoSeconds);
   const secs: Record<string, number> = { nets: T.netsSeconds, gate: T.gateSeconds, ads: T.adsSeconds, iftar: T.iftarSeconds };
   return secs[choice] ? Math.max(CORRUPTION.minPrice, incomeSeconds(state, secs[choice]!)) : 0;
 }
@@ -211,7 +212,7 @@ export function applyChoice(state: GameState, choice: string, plot?: number): Ga
     case 'ignore':
       return mark(s);
     case 'pay':
-      return endEvent(mark({ ...s, taka: Math.max(0, s.taka - incomeSeconds(s, T.pradoSeconds)) }));
+      return endEvent(mark(s));
     case 'blame':
       return endEvent(mark(addHeat(s, T.blameMedia, 0, 0)));
     case 'spree':

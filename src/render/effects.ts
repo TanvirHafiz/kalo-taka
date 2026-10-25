@@ -6,6 +6,8 @@ import type { Building } from '../state/types';
 import { box, circle, line, type Ctx } from './draw';
 import { INK } from './palette';
 
+const EVICT_DUST_MS = 900;
+
 export interface PlotFx {
   dx: number;
   dy: number;
@@ -21,7 +23,8 @@ export interface PlotFx {
 type Fx =
   | { kind: 'merge'; left: number; right: number; oldLeft: Building; oldRight: Building; start: number }
   | { kind: 'build'; plot: number; start: number }
-  | { kind: 'upgrade'; plot: number; start: number };
+  | { kind: 'upgrade'; plot: number; start: number }
+  | { kind: 'evict'; plot: number; start: number };
 
 const reduceMotion = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ease = (t: number) => 1 - (1 - t) ** 3;
@@ -47,10 +50,23 @@ export class Effects {
     this.list.push({ kind: 'upgrade', plot, start: now });
   }
 
+  /** Dust where a bulldozed building stood. */
+  evict(plot: number, now: number): void {
+    if (reduceMotion()) return;
+    this.list = this.list.filter((f) => !('plot' in f && f.plot === plot));
+    this.list.push({ kind: 'evict', plot, start: now });
+  }
+
   private duration(f: Fx): number {
     if (f.kind === 'merge') return VISUAL.mergeShakeMs + VISUAL.mergeRiseMs + 400;
     if (f.kind === 'build') return VISUAL.buildRiseMs + 300;
+    if (f.kind === 'evict') return EVICT_DUST_MS;
     return VISUAL.upgradePopMs;
+  }
+
+  /** Drop every running animation (new run). */
+  clear(): void {
+    this.list = [];
   }
 
   update(now: number): void {
@@ -105,6 +121,9 @@ export class Effects {
         }
       } else if (f.kind === 'build') {
         if (t < 600) dust(ctx, plotX(f.plot), t / 600, f.start);
+      } else if (f.kind === 'evict') {
+        // the bulldozer's cloud: three puffs across the plot
+        for (let i = -1; i <= 1; i++) dust(ctx, plotX(f.plot) + i * 34, t / EVICT_DUST_MS, f.start + i * 5);
       } else {
         confetti(ctx, plotX(f.plot), heightOf(f.plot), t / VISUAL.upgradePopMs, f.start);
       }

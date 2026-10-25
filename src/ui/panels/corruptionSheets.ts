@@ -1,6 +1,8 @@
 // Posters and Nephews sheets.
 import { CORRUPTION, NEPHEWS, NEPHEW_MAX_LEVEL } from '../../config/balance';
-import { STRINGS, fmt } from '../../config/strings';
+import { DESTINATIONS, PRESTIGE } from '../../config/events';
+import { FLEE, STRINGS, fmt } from '../../config/strings';
+import { canFlee, destinationUnlocked, starOffer } from '../../sim/prestige';
 import { NEPHEW_IDS, activeCampaigns, journalistCost, nephewEffect, nephewHireCost, nephewSkim, nephewTrainCost, nephewUnlocked, posterCost, totalSkim } from '../../sim/corruption';
 import type { GameState } from '../../state/types';
 import type { SheetRow, SheetView } from './sheet';
@@ -62,6 +64,36 @@ export function nephewsView(state: GameState): SheetView {
     title: STRINGS.nephews.title,
     intro: STRINGS.nephews.intro,
     status: fmt(STRINGS.nephews.totalSkim, { pct: pct(totalSkim(state)) }),
+    rows,
+  };
+}
+
+const PERK_AT = [PRESTIGE.perkPlotsAt, PRESTIGE.perkCashAt, PRESTIGE.perkEarlyUnlockAt, PRESTIGE.perkShortInquiryAt, PRESTIGE.perkFreeDotolaAt];
+
+export function fleeView(state: GameState): SheetView {
+  const offer = starOffer(state);
+  const total = state.stars + offer;
+  const rows: SheetRow[] = DESTINATIONS.map((d) => {
+    const text = FLEE.destinations[d.id];
+    const open = destinationUnlocked(d.id, total);
+    return {
+      id: `dest-${d.id}`,
+      title: text.name,
+      lines: open ? [text.perk] : [text.perk, fmt(FLEE.lockedAt, { n: d.atStars })],
+      buttons: [{ id: `flee-${d.id}`, label: FLEE.confirm, error: canFlee(state, d.id), action: { type: 'flee', destination: d.id } }],
+      dim: !open,
+    };
+  });
+  rows.push({
+    id: 'perks',
+    title: FLEE.perksTitle,
+    lines: FLEE.perks.map((p, i) => `${total >= PERK_AT[i]! ? '\u2713' : '\u2022'} ${PERK_AT[i]}: ${p}`),
+    buttons: [],
+  });
+  return {
+    title: FLEE.title,
+    intro: `${FLEE.intro} ${FLEE.keeps}`,
+    status: `${fmt(FLEE.offer, { n: offer })} \u00b7 ${fmt(FLEE.total, { n: total, pct: `${Math.round(total * PRESTIGE.incomePerStar * 100)}%` })}`,
     rows,
   };
 }

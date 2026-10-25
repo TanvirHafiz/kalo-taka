@@ -158,7 +158,8 @@ export type Action =
   | { type: 'bachelors' }
   | { type: 'eventChoice'; choice: string; plot?: number }
   | { type: 'flee'; destination: DestinationId }
-  | { type: 'skipTutorial' };
+  | { type: 'skipTutorial' }
+  | { type: 'evict'; plot: number };
 
 export interface ActionResult {
   state: GameState;

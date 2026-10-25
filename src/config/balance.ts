@@ -120,6 +120,18 @@ export const CORRUPTION = {
   /** Paying off journalists: seconds of income (Influence discount applies) and Media Heat removed. */
   journalistSeconds: 45,
   journalistMedia: 25,
+  /**
+   * Eviction drive: bulldoze a building to free its plot. Refunds this share of what the building
+   * cost (its tier's base cost plus the upgrades it has had). Heat depends on who gets thrown out.
+   */
+  evictRefund: 0.25,
+  evictAngerHousing: 25,
+  evictMediaHousing: 15,
+  evictAngerOther: 5,
+  evictMediaOther: 8,
+  evictCommittee: 5,
+  /** The button needs a second tap within this many ms. */
+  evictConfirmMs: 3000,
   /** Floor for every income-scaled price (so nothing is free when income is tiny). */
   minPrice: 500 * MONEY_SCALE,
 } as const;
@@ -148,6 +160,14 @@ export const RONY_AT_BUILDINGS = 5;
 export const NEPHEW_MAX_LEVEL = 5;
 
 /** Visual pacing and street-life tuning. Read by render/ (and later by event timing). */
+/** The guided start. */
+export const TUTORIAL = {
+  /** Step 1 waits this long for the player to watch the money tick. */
+  watchMs: 5000,
+  /** However it went, the tutorial (and its 1 s permits) ends after this much play. */
+  maxPlayMs: 15 * 60_000,
+} as const;
+
 export const VISUAL = {
   /** One full day and night, in real milliseconds (spec: 6 minutes). */
   dayLengthMs: 360_000,

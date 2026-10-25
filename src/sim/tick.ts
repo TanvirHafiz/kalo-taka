@@ -25,7 +25,8 @@ export function advance(state: GameState, now: number): AdvanceResult {
   if (gap < 0) return { state: { ...state, lastSimTime: now }, caughtUp: 0, caughtUpMs: 0 };
   if (gap > BALANCE.maxFrameMs) {
     const r = catchUp(state, now);
-    return { state: r.state, caughtUp: r.earned, caughtUpMs: gap };
+    // the tutorial only waits on the player, so a stalled tab must not hold it back
+    return { state: advanceTutorial(r.state), caughtUp: r.earned, caughtUpMs: gap };
   }
   let s = state;
   const dtSec = BALANCE.tickMs / 1000;

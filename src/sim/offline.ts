@@ -37,5 +37,5 @@ export function offlineCatchUp(state: GameState, now: number): GameState {
     s = growWorld(updateUnlocks(s));
   }
   const earned = s.lifetimeEarnings - before;
-  return earned > 0 ? { ...s, events: [...s.events, { kind: 'offline', earned, gross: earned / OFFLINE.rate }] } : s;
+  return earned > 0 && gap >= OFFLINE.reportMinMs ? { ...s, events: [...s.events, { kind: 'offline', earned, gross: earned / OFFLINE.rate }] } : s;
 }
