@@ -5,7 +5,7 @@ import { BUILDINGS, CATEGORIES } from '../../config/buildings';
 import { STRINGS, errorText, fmt, type ErrorKey } from '../../config/strings';
 import { buildingSeed } from '../../render/buildings/cache';
 import { canBuild, canBuyPlot, canEvict, canGrab, canInquiry, canMerge, canSpeedMoney, canUpgrade, evictRefund, upgradePlan } from '../../sim/actions';
-import { inquiryCost, isFrozen, speedMoneyCost, waterPumpCost } from '../../sim/corruption';
+import { inquiryCost, isFrozen, isLockJob, speedMoneyCost, waterPumpCost } from '../../sim/corruption';
 import { buildCost, neighbourBonus, patients, plotCost, plotIncome, tierDef } from '../../sim/economy';
 import { plotById } from '../../sim/layout';
 import { unlockTier } from '../../sim/prestige';
@@ -23,6 +23,8 @@ interface ButtonSpec {
   note?: string;
   /** Destructive: the first tap arms the button and shows this label, the second tap acts. */
   confirm?: string;
+  /** Not an action: starts choosing where to move this building. */
+  move?: boolean;
   action: Action;
 }
 
@@ -128,7 +130,7 @@ function viewFor(state: GameState, id: number, count: UpgradeCount): View {
     }
   }
   if (job) {
-    const leadJob = !(job.kind === 'merge' && !job.result);
+    const leadJob = !isLockJob(job);
     lines.unshift(fmt(STRINGS.permit.waiting, { label: STRINGS.permit[job.kind === 'fill' ? 'build' : job.kind], secs: secsLeft }));
     if (leadJob) buttons.push(speedButton());
   }
@@ -158,6 +160,14 @@ function viewFor(state: GameState, id: number, count: UpgradeCount): View {
   }
   if (!partners.length) lines.push(b.level >= BALANCE.maxLevel ? `${STRINGS.plot.mergeHint}. ${STRINGS.plot.evictHint}` : STRINGS.plot.mergeHint);
   buttons.push({
+    id: 'relocate',
+    label: STRINGS.plot.relocate,
+    note: STRINGS.plot.relocateNote,
+    move: true,
+    error: state.tutorial.done ? null : 'tutorialRunning',
+    action: { type: 'relocate', from: id, to: id },
+  });
+  buttons.push({
     id: 'evict',
     label: STRINGS.plot.evict,
     note: fmt(STRINGS.plot.evictNote, { refund: formatTaka(evictRefund(state, id)) }),
@@ -174,7 +184,7 @@ function viewFor(state: GameState, id: number, count: UpgradeCount): View {
   };
 }
 
-export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void): PlotPanel {
+export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void, onMove: (plot: number) => void): PlotPanel {
   const el = document.createElement('section');
   el.className = 'panel';
   el.setAttribute('aria-hidden', 'true');
@@ -210,6 +220,10 @@ export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void
     const btn = (e.target as HTMLElement).closest('button');
     const spec = btn && actions.get(btn.dataset.id ?? '');
     if (!btn || !spec || btn.disabled) return;
+    if (spec.move) {
+      if (selected !== null) onMove(selected);
+      return;
+    }
     if (spec.confirm && (armed?.id !== spec.id || performance.now() > armed.until)) {
       armed = { id: spec.id, until: performance.now() + CORRUPTION.evictConfirmMs };
       if (last) panel.update(last);

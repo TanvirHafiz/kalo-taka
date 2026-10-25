@@ -11,7 +11,7 @@ export interface Building {
 
 export type Row = 'front' | 'back';
 
-export type JobKind = 'build' | 'upgrade' | 'merge' | 'fill';
+export type JobKind = 'build' | 'upgrade' | 'merge' | 'fill' | 'move';
 
 /**
  * Work waiting on a permit (or on sand trucks). Paid up front; the change lands at `until`.
@@ -147,7 +147,8 @@ export type SimEvent =
   | { kind: 'offline'; earned: number; gross: number }
   | { kind: 'tutorial'; step: number }
   | { kind: 'loan'; amount: number }
-  | { kind: 'fled'; stars: number };
+  | { kind: 'fled'; stars: number }
+  | { kind: 'moved'; from: number; to: number };
 
 export type UpgradeCount = 1 | 10 | 'max';
 
@@ -171,7 +172,8 @@ export type Action =
   | { type: 'eventChoice'; choice: string; plot?: number }
   | { type: 'flee'; destination: DestinationId }
   | { type: 'skipTutorial' }
-  | { type: 'evict'; plot: number };
+  | { type: 'evict'; plot: number }
+  | { type: 'relocate'; from: number; to: number };
 
 export interface ActionResult {
   state: GameState;

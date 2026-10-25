@@ -135,6 +135,12 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 - Tutorial: if it is not finished after 15 min of play, it ends on its own (so 1 s permits never linger). Tap Mamun's face when he has nothing to say to bring back the tutorial step or the running event's choices; "Later" no longer loses them.
 - Save format v5 (migrates from v4).
 
+### Relocation permit (added on request)
+
+- "Relocation permit" on a building's card, then tap an empty plot you own to move it there, or another of your buildings to swap the two. Tap the moving building again, press Esc or hit Cancel on the banner to back out.
+- Costs 60 s of the moving building's rent (both buildings' rent for a swap, ৳50,000 minimum), a 15 s permit with both plots locked (buildings keep earning where they stand; speed money works on the moving one), and +5 Committee.
+- Not possible during a permit, an inquiry or the tutorial, or onto a side business. A cash bag on either plot goes; plot-bound things (grabbed flag, generator, flyover frontage) stay with the plot.
+
 ### Eviction drive (added on request)
 
 - Any building you own can be bulldozed from its card, so a building boxed in by mismatched neighbours is never a dead end. The button needs a second tap within 3 s.

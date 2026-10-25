@@ -24,6 +24,7 @@ import { GOLD, GROUND, GROUND_DARK, INK, LEAF, LEAF_DARK } from './palette';
 import { People } from './people';
 import { CURB_H, FOOTPATH_H, drawBackdrop, drawLampGlow, drawPoles, drawSkylineLights, drawStreet, drawTree } from './scene';
 import { Traffic } from './traffic';
+import { isLockJob } from '../sim/corruption';
 
 export const PLOT_W = 150;
 export const PLOT_GAP = 14;
@@ -532,7 +533,7 @@ export class CityRenderer {
       if (b && p.row === 'front') levelBadge(ctx, cx, b.level);
       // permits, land fills and inquiries
       const job = p.job;
-      const lead = job && !(job.kind === 'merge' && !job.result);
+      const lead = job && !isLockJob(job);
       const k = p.row === 'back' ? BACK_SCALE : 1;
       const baseY = p.row === 'back' ? BACK_Y : 0;
       const topY = baseY - (s ? s.height : job?.kind === 'build' ? 92 : 60) * k;

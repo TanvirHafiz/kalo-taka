@@ -49,7 +49,29 @@ addGrain(app, overlay);
 
 initToasts(overlay);
 const hud = createHud(overlay);
-const panel = createPlotPanel(overlay, dispatch);
+const panel = createPlotPanel(overlay, dispatch, (plot) => startMove(plot));
+
+// --- Relocation: after "Relocation permit", the next plot tapped is the destination ---------
+let moveFrom: number | null = null;
+const moveBanner = document.createElement('div');
+moveBanner.className = 'move-banner';
+moveBanner.hidden = true;
+moveBanner.innerHTML = '<span></span><button type="button"></button>';
+moveBanner.querySelector('button')!.textContent = STRINGS.plot.relocateCancel;
+moveBanner.querySelector('button')!.addEventListener('click', () => endMove());
+overlay.appendChild(moveBanner);
+function startMove(plot: number): void {
+  const b = plotById(state, plot)?.building;
+  if (!b) return;
+  moveFrom = plot;
+  panel.close();
+  moveBanner.querySelector('span')!.textContent = fmt(STRINGS.plot.relocateBanner, { name: tierDef(b.category, b.tier)?.name ?? '' });
+  moveBanner.hidden = false;
+}
+function endMove(): void {
+  moveFrom = null;
+  moveBanner.hidden = true;
+}
 const cam = createCamera();
 const city = new CityRenderer();
 const ticker = createTicker(overlay);
@@ -129,6 +151,14 @@ function drainEvents(): void {
     } else if (e.kind === 'tutorial') sayTutorial(e.step);
     else if (e.kind === 'loan') showToast(MAMUN.loan);
     else if (e.kind === 'fled') fled(e.stars);
+    else if (e.kind === 'moved') {
+      const b = plotById(state, e.to)?.building;
+      const name = b ? (tierDef(b.category, b.tier)?.name ?? '') : '';
+      city.effects.build(e.to, now);
+      if (plotById(state, e.from)?.building) city.effects.build(e.from, now);
+      showToast(fmt(STRINGS.toasts.moved, { name }));
+      ticker.push(TICKER.moved, { building: name });
+    }
   }
   state = { ...state, events: [] };
 }
@@ -322,6 +352,11 @@ function endPointer(e: PointerEvent, tap: boolean): void {
   else if (hit.kind === 'bag') dispatch({ type: 'collectBag' });
   else if (hit.kind === 'briefcase') dispatch({ type: 'collectBriefcase' });
   else if (hit.kind === 'boat') dispatch({ type: 'eventChoice', choice: 'boat' });
+  else if (moveFrom !== null) {
+    // tapping the moving building again cancels; anything else is the destination
+    if (hit.plot !== moveFrom) dispatch({ type: 'relocate', from: moveFrom, to: hit.plot });
+    endMove();
+  }
   else {
     postersSheet.close();
     nephewsSheet.close();
@@ -344,7 +379,10 @@ canvas.addEventListener('wheel', (e) => {
   }
 }, { passive: false });
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeAll();
+  if (e.key === 'Escape') {
+    closeAll();
+    endMove();
+  }
 });
 
 // --- Loop ------------------------------------------------------------------
@@ -412,7 +450,7 @@ function frame(): void {
     idleIn = IDLE_MS;
     if (!mamun.current() && state.tutorial.done) mamun.say({ key: 'idle', text: pick(MAMUN.idle), buttons: [], ttl: 9000 });
   }
-  city.frame(ctx, state, cam, panel.selected, dpr, now, (performance.now() - bootTime) / 1000);
+  city.frame(ctx, state, cam, panel.selected ?? moveFrom, dpr, now, (performance.now() - bootTime) / 1000);
   debug?.frame(performance.now() - t0);
   requestAnimationFrame(frame);
 }

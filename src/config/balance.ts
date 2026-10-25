@@ -150,6 +150,10 @@ export const CORRUPTION = {
   evictCommittee: 5,
   /** The button needs a second tap within this many ms. */
   evictConfirmMs: 3000,
+  /** Relocation permit: seconds of the moving buildings' income, the wait, and Committee gained. */
+  relocateSeconds: 60,
+  permitRelocate: 15,
+  relocateCommittee: 5,
   /** Floor for every income-scaled price (so nothing is free when income is tiny). */
   minPrice: 500 * MONEY_SCALE,
 } as const;

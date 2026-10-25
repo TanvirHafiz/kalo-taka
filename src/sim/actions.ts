@@ -3,7 +3,7 @@ import type { Category } from '../config/buildings';
 import type { ErrorKey } from '../config/strings';
 import type { Action, ActionResult, Building, GameState, Plot, UpgradeCount } from '../state/types';
 import {
-  addHeat, addInfluence, completeJob, endInquiry, inquiryCost, journalistCost, isFrozen, newJob, nephewHireCost, nephewTrainCost, nephewUnlocked,
+  addHeat, addInfluence, completeJob, isLockJob, endInquiry, inquiryCost, journalistCost, isFrozen, newJob, nephewHireCost, nephewTrainCost, nephewUnlocked,
   permitSeconds, posterCost, rollLeak, speedMoneyCost, waterPumpCost,
 } from './corruption';
 import { buildCost, plotCost, plotIncome, tierDef, upgradeCost, upgradeCostN } from './economy';
@@ -94,7 +94,7 @@ export function canMerge(state: GameState, a: number, b: number): ErrorKey | nul
 
 export function canSpeedMoney(state: GameState, plot: number): ErrorKey | null {
   const job = plotById(state, plot)?.job;
-  if (!job || job.kind === 'fill' || (job.kind === 'merge' && !job.result)) return 'noPermit';
+  if (!job || job.kind === 'fill' || isLockJob(job)) return 'noPermit';
   if (isFrozen(state, plot)) return 'frozen';
   if (state.taka < speedMoneyCost(state, plot)) return 'notEnoughTaka';
   return null;
@@ -117,6 +117,27 @@ export function canEvict(state: GameState, plot: number): ErrorKey | null {
   if (p.job) return 'permitPending';
   if (isFrozen(state, plot)) return 'frozen';
   if (!state.tutorial.done) return 'tutorialRunning';
+  return null;
+}
+
+/** Relocation fee: a minute of the moving building's rent, plus the other one's when swapping. */
+export function relocateCost(state: GameState, from: number, to: number): number {
+  const rent = plotIncome(state, from, false, false) + (plotById(state, to)?.building ? plotIncome(state, to, false, false) : 0);
+  return Math.max(CORRUPTION.minPrice, Math.ceil(rent * CORRUPTION.relocateSeconds));
+}
+
+export function canRelocate(state: GameState, from: number, to: number): ErrorKey | null {
+  const a = plotById(state, from);
+  const b = plotById(state, to);
+  if (!a || !b) return 'noSuchPlot';
+  if (from === to) return 'samePlot';
+  if (!a.building) return 'plotEmpty';
+  if (!b.owned) return 'plotNotOwned';
+  if (a.job || b.job) return 'permitPending';
+  if (sideBizOn(state, to)) return 'sideBizHere';
+  if (isFrozen(state, from) || isFrozen(state, to)) return 'frozen';
+  if (!state.tutorial.done) return 'tutorialRunning';
+  if (state.taka < relocateCost(state, from, to)) return 'notEnoughTaka';
   return null;
 }
 
@@ -271,6 +292,18 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       // a bag sitting on the bulldozed building goes with it
       if (s.bag?.plot === action.plot) s = scheduleBag({ ...s, bag: null }, now);
       return { state: s };
+    }
+    case 'relocate': {
+      const error = canRelocate(state, action.from, action.to);
+      if (error) return { state, error };
+      const moving = plotById(state, action.from)!.building!;
+      const secs = CORRUPTION.permitRelocate;
+      // both plots are locked; the buildings keep earning where they stand until the stamp lands
+      const lead = newJob('move', now, secs, { result: moving, partner: action.to });
+      const lock = newJob('move', now, secs, { partner: action.from });
+      const plots = state.plots.map((p) => (p.index === action.from ? { ...p, job: lead } : p.index === action.to ? { ...p, job: lock } : p));
+      const s = { ...state, plots, taka: state.taka - relocateCost(state, action.from, action.to) };
+      return { state: addHeat(s, 0, 0, CORRUPTION.relocateCommittee) };
     }
     case 'skipTutorial':
       return { state: endTutorial(state) };

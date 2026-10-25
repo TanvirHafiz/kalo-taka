@@ -187,6 +187,11 @@ function patchPlots(state: GameState, patch: Record<number, Partial<Plot>>): Gam
   return { ...state, plots: state.plots.map((p) => (patch[p.index] ? { ...p, ...patch[p.index] } : p)) };
 }
 
+/** The locked partner plot of a merge or a relocation (the lead plot holds the result). */
+export function isLockJob(job: Job | null | undefined): boolean {
+  return !!job && (job.kind === 'merge' || job.kind === 'move') && !job.result;
+}
+
 /** Apply one finished job (also used by speed money). */
 export function completeJob(state: GameState, plot: number): GameState {
   const p = plotById(state, plot);
@@ -216,13 +221,24 @@ export function completeJob(state: GameState, plot: number): GameState {
       if (s.bag?.plot === right) s = scheduleBag({ ...s, bag: null }, s.lastSimTime);
       return withEvent(s, { kind: 'merged', left: plot, right, oldLeft, oldRight });
     }
+    case 'move': {
+      if (!job.result) return job.partner !== undefined ? completeJob(state, job.partner) : state;
+      // the lead plot holds the moving building; the other building (if any) takes its place
+      const to = job.partner!;
+      const other = plotById(state, to)?.building ?? null;
+      let s = patchPlots(state, { [plot]: { building: other, job: null }, [to]: { building: job.result, job: null } });
+      if (s.inquiry?.plot === plot) s = { ...s, inquiry: { ...s.inquiry, plot: to } };
+      else if (s.inquiry?.plot === to) s = { ...s, inquiry: { ...s.inquiry, plot } };
+      if (s.bag && (s.bag.plot === plot || s.bag.plot === to)) s = scheduleBag({ ...s, bag: null }, s.lastSimTime);
+      return withEvent(s, { kind: 'moved', from: plot, to });
+    }
   }
 }
 
 /** Finish every job due by `now`, earliest first (ties by plot id). */
 export function completeDueJobs(state: GameState, now: number): GameState {
   const due = state.plots
-    .filter((p) => p.job && p.job.until <= now && !(p.job.kind === 'merge' && !p.job.result))
+    .filter((p) => p.job && p.job.until <= now && !isLockJob(p.job))
     .sort((a, b) => a.job!.until - b.job!.until || a.index - b.index);
   let s = state;
   for (const p of due) s = completeJob(s, p.index);
