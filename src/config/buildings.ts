@@ -12,6 +12,7 @@ export interface TierDef {
 }
 
 import { MONEY_SCALE } from './balance';
+import type { EventId } from './events';
 
 const LAKH = 100_000;
 const CRORE = 10_000_000;
@@ -90,11 +91,19 @@ export interface DistrictDef {
   name: string;
   /** Total income per second that unlocks this district. */
   unlockIncome: number;
+  /** Event weight multipliers while this is your newest district (events are city-wide). */
+  eventOdds?: Partial<Record<EventId, number>>;
 }
 
-/** Districts unlock in order as income grows. The remaining two arrive in M6. */
+/** Districts unlock in order as income grows. */
 export const DISTRICTS: readonly DistrictDef[] = [
-  { name: 'Mirpara', unlockIncome: 0 },
-  { name: 'Dhanpur', unlockIncome: 5_000 * MONEY_SCALE },
-  { name: 'Gulmohor', unlockIncome: 2 * LAKH * MONEY_SCALE },
+  { name: 'Mirpara', unlockIncome: 0, eventOdds: { loadShedding: 1.5 } },
+  // the lake breeds mosquitoes
+  { name: 'Dhanpur', unlockIncome: 5_000 * MONEY_SCALE, eventOdds: { dengue: 1.5, monsoon: 1.25 } },
+  // diplomats and their motorcades
+  { name: 'Gulmohor', unlockIncome: 2 * LAKH * MONEY_SCALE, eventOdds: { vip: 2, journalist: 1.5 } },
+  // the new town is all flyovers and gas lines on paper
+  { name: 'Purbopur', unlockIncome: 1 * CRORE * MONEY_SCALE, eventOdds: { flyover: 2.5, gas: 1.5 } },
+  // a river island floods first and asks questions later
+  { name: 'Notun Char', unlockIncome: 50 * CRORE * MONEY_SCALE, eventOdds: { monsoon: 2.5, journalist: 1.5 } },
 ];

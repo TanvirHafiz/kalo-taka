@@ -1,13 +1,14 @@
 // Random events: the scheduler, what each event does, the player's responses and side incomes.
 // Pure functions over state; randomness comes from state.rng.
 import { CORRUPTION } from '../config/balance';
+import { DISTRICTS } from '../config/buildings';
 import { EVENTS, EVENT_IDS, EVENT_TUNING as T, type EventId } from '../config/events';
 import type { ErrorKey } from '../config/strings';
 import type { ActiveEvent, GameState, SimEvent } from '../state/types';
 import { rngStep } from '../util/rng';
 import { addHeat, addInfluence, incomeSeconds } from './corruption';
 import { baseIncome, plotIncome } from './economy';
-import { plotById } from './layout';
+import { districtCount, plotById } from './layout';
 
 const withEvent = (s: GameState, e: SimEvent): GameState => ({ ...s, events: [...s.events, e] });
 
@@ -89,12 +90,15 @@ export function maybeStartEvent(state: GameState, now: number): GameState {
   [gap, s] = rand(s);
   s = { ...s, nextEventPlayMs: s.runPlayMs + T.gapMinMs + gap * (T.gapMaxMs - T.gapMinMs) };
   if (!pool.length) return s;
-  const total = pool.reduce((t, id) => t + EVENTS[id].weight, 0);
+  // your newest district tilts the odds (the lake breeds mosquitoes, the island floods)
+  const odds = DISTRICTS[districtCount(state) - 1]?.eventOdds ?? {};
+  const weight = (id: EventId) => EVENTS[id].weight * (odds[id] ?? 1);
+  const total = pool.reduce((t, id) => t + weight(id), 0);
   let roll: number;
   [roll, s] = rand(s);
   let acc = roll * total;
   for (const id of pool) {
-    acc -= EVENTS[id].weight;
+    acc -= weight(id);
     if (acc <= 0) return startEvent(s, id, now);
   }
   return startEvent(s, pool[pool.length - 1]!, now);

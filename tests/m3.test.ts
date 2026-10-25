@@ -103,7 +103,9 @@ describe('world growth', () => {
     let s = place(world(), [[0, 'front', 0, b('retail', 5, 10)]]);
     s = { ...s, boostUntil: 0 };
     s = growWorld(s);
-    expect(districtCount(s)).toBe(DISTRICTS.length);
+    const base0 = totalIncome(s, false);
+    expect(districtCount(s)).toBe(DISTRICTS.filter((d) => d.unlockIncome <= base0).length);
+    expect(districtCount(s)).toBeGreaterThan(2);
 
     let small = place(world(), [[0, 'front', 0, b('food', 4, 3)]]);
     const base = totalIncome(small, false);
