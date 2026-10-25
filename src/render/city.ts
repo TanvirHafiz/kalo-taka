@@ -161,6 +161,15 @@ function drawGate(ctx: Ctx, x: number, name: string): void {
   fitText(ctx, fmt(STRINGS.district.welcome, { name }), x, -119, 74, 10, '#c8553d');
 }
 
+/** The plot's number (as on its card), on the footpath below it; back-row numbers sit at their base. */
+function plotNumber(ctx: Ctx, p: Plot): void {
+  const back = p.row === 'back';
+  const x = plotCenter(p) - (back ? 40 * BACK_SCALE : 44);
+  const y = back ? BACK_Y + 4 : FOOTPATH_H * 0.5;
+  circle(ctx, x, y, 7, back ? 'rgba(58,46,37,0.55)' : 'rgba(58,46,37,0.8)', false);
+  fitText(ctx, String(p.slot + 1), x, y + 0.5, 12, 9, '#fffaf0', 800);
+}
+
 function levelBadge(ctx: Ctx, cx: number, level: number): void {
   const max = level >= BALANCE.maxLevel;
   const text = max ? `MAX ${level}/${BALANCE.maxLevel}` : `Lv ${level}/${BALANCE.maxLevel}`;
@@ -531,6 +540,7 @@ export class CityRenderer {
     for (const { p, b, s } of shown) {
       const cx = plotCenter(p);
       if (b && p.row === 'front') levelBadge(ctx, cx, b.level);
+      plotNumber(ctx, p);
       // permits, land fills and inquiries
       const job = p.job;
       const lead = job && !isLockJob(job);
