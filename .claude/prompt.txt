@@ -1,0 +1,1 @@
+Set up this project with a Haiku Explore agent, an Opus advisor agent, Sonnet as the main model, and these CLAUDE.md rules:
