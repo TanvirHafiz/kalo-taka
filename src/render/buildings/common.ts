@@ -1,7 +1,7 @@
 // Reusable building modules. Local space: ground at y = 0, up is negative y.
 import { box, circle, ellipse, fitText, line, pick, poly, range, roundBox, type Ctx } from '../draw';
 import {
-  BRICK, BRICK_MORTAR, CLOTHES, GLASS, GLASS_HI, GOLD, GOLD_DARK, INK, LEAF, LEAF_DARK, POT, RUST, RUST_DARK, SKIN,
+  BRICK, BRICK_MORTAR, CLOTHES, GLASS, GLASS_HI, GOLD, GOLD_DARK, INK, LEAF, LEAF_DARK, POT, RUST, RUST_DARK, SIGN_LIGHT, SKIN,
 } from '../palette';
 
 export type Rng = () => number;
@@ -59,9 +59,6 @@ export function windowUnit(ctx: Ctx, x: number, y: number, w: number, h: number,
   }
   ctx.stroke();
   ctx.restore();
-  ctx.lineWidth = 1.5;
-  ctx.strokeStyle = '#2b2320';
-  ctx.strokeRect(x, y, w, h);
 }
 
 export function ac(ctx: Ctx, x: number, y: number): void {
@@ -115,13 +112,7 @@ export function plant(ctx: Ctx, x: number, base: number): void {
 
 export function dish(ctx: Ctx, x: number, base: number): void {
   line(ctx, x, base, x, base - 7, INK, 1.5);
-  ctx.beginPath();
-  ctx.ellipse(x, base - 10, 6, 4, -0.5, 0, Math.PI * 2);
-  ctx.fillStyle = '#e6e6e6';
-  ctx.fill();
-  ctx.lineWidth = 1.5;
-  ctx.strokeStyle = INK;
-  ctx.stroke();
+  ellipse(ctx, x, base - 10, 6, 4, '#e6e6e6');
 }
 
 export function cat(ctx: Ctx, x: number, base: number, color = '#e08a3c'): void {
@@ -156,7 +147,7 @@ export function rebar(ctx: Ctx, x1: number, x2: number, base: number, rng: Rng):
 }
 
 export function signboard(ctx: Ctx, cx: number, cy: number, w: number, h: number, text: string, bg: string, tilt = 0): void {
-  const fg = bg === '#ffc93c' || bg === '#f2f2f2' ? '#2b2320' : '#ffffff';
+  const fg = SIGN_LIGHT.includes(bg) ? INK : '#fffaf0';
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(tilt);
@@ -167,18 +158,15 @@ export function signboard(ctx: Ctx, cx: number, cy: number, w: number, h: number
 
 /** Corrugated tin wall with vertical ribs. */
 export function corrugated(ctx: Ctx, x: number, y: number, w: number, h: number, color: string): void {
-  box(ctx, x, y, w, h, color, false);
-  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+  box(ctx, x, y, w, h, color);
+  ctx.strokeStyle = 'rgba(60,40,20,0.16)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let rx = x + 3; rx < x + w; rx += 4) {
-    ctx.moveTo(rx, y);
-    ctx.lineTo(rx, y + h);
+    ctx.moveTo(rx, y + 1);
+    ctx.lineTo(rx, y + h - 1);
   }
   ctx.stroke();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = INK;
-  ctx.strokeRect(x, y, w, h);
 }
 
 /** Single-slope tin roof with rust patches and a couple of bricks holding it down. */
@@ -191,7 +179,7 @@ export function tinRoof(ctx: Ctx, x1: number, x2: number, eave: number, rise: nu
   for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i]!, pts[i + 1]!);
   ctx.closePath();
   ctx.clip();
-  ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+  ctx.strokeStyle = 'rgba(60,40,20,0.14)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let rx = x1 - 6; rx < x2 + 8; rx += 4) {
@@ -215,7 +203,11 @@ export function tinRoof(ctx: Ctx, x1: number, x2: number, eave: number, rise: nu
 }
 
 export function brickWall(ctx: Ctx, x: number, y: number, w: number, h: number): void {
-  box(ctx, x, y, w, h, BRICK, false);
+  box(ctx, x, y, w, h, BRICK);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x + 0.5, y + 0.5, w - 1, h - 1);
+  ctx.clip();
   ctx.strokeStyle = BRICK_MORTAR;
   ctx.lineWidth = 0.8;
   ctx.beginPath();
@@ -229,9 +221,7 @@ export function brickWall(ctx: Ctx, x: number, y: number, w: number, h: number):
     }
   }
   ctx.stroke();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = INK;
-  ctx.strokeRect(x, y, w, h);
+  ctx.restore();
 }
 
 export function door(ctx: Ctx, x: number, base: number, w: number, h: number, color: string, curtain?: string): void {

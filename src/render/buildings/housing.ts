@@ -5,7 +5,7 @@ import { STRINGS } from '../../config/strings';
 import type { Building } from '../../state/types';
 import { buildingName } from '../../util/names';
 import { hashSeed, mulberry32 } from '../../util/rng';
-import { box, circle, ellipse, fitText, line, pick, poly, range, roundBox, type Ctx } from '../draw';
+import { box, circle, ellipse, fitText, line, paperShape, pick, poly, range, roundBox, type Ctx } from '../draw';
 import {
   CLOTHES, CONCRETE, GLASS, GLASS_HI, GOLD, GOLD_DARK, GRILL, INK, LEAF, MARBLE, SIGN_BG, SLAB, TIN, WALLS, WATER, WATER_DARK,
 } from '../palette';
@@ -109,7 +109,7 @@ function semiPucca(b: Building, seed: number): Design {
       // hip roof
       poly(ctx, [-62, -51, 50, -51, 36, -70, -48, -70], roof);
       ctx.save();
-      ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+      ctx.strokeStyle = 'rgba(60,40,20,0.14)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let x = -56; x < 46; x += 4) {
@@ -278,18 +278,19 @@ function duplex(b: Building, seed: number): Design {
       box(ctx, x0 - 3, -49, w + 6, 4, SLAB);
       box(ctx, x0 + 5, -101, w - 10, 4, SLAB);
       // arched windows
-      const arch = (x: number, y: number, ww: number, hh: number) => {
+      const archPath = (x: number, y: number, ww: number, hh: number) => () => {
         ctx.beginPath();
         ctx.moveTo(x, y + hh);
         ctx.lineTo(x, y + ww / 2);
         ctx.arc(x + ww / 2, y + ww / 2, ww / 2, Math.PI, 0);
         ctx.lineTo(x + ww, y + hh);
         ctx.closePath();
+      };
+      const arch = (x: number, y: number, ww: number, hh: number) => {
+        paperShape(ctx, trim, archPath(x - 2, y - 2, ww + 4, hh + 2));
+        archPath(x, y, ww, hh)();
         ctx.fillStyle = GLASS;
         ctx.fill();
-        ctx.lineWidth = 2.5;
-        ctx.strokeStyle = trim;
-        ctx.stroke();
         line(ctx, x + ww / 2, y + 2, x + ww / 2, y + hh, trim, 1.2);
       };
       for (const wx of [-52, -24, 12, 40]) arch(wx, -88, 14, 30);
@@ -358,13 +359,11 @@ function palace(b: Building, seed: number): Design {
           }
         }
         box(ctx, sx - 2, -114, 42, 5, SLAB);
-        ctx.beginPath();
-        ctx.ellipse(sx + 19, -114, 14, 16, 0, Math.PI, 0);
-        ctx.fillStyle = dome;
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = INK;
-        ctx.stroke();
+        paperShape(ctx, dome, () => {
+          ctx.beginPath();
+          ctx.ellipse(sx + 19, -114, 14, 16, 0, Math.PI, 0);
+          ctx.closePath();
+        });
         line(ctx, sx + 19, -130, sx + 19, -138, INK, 1.5);
       }
       // central block
@@ -384,28 +383,24 @@ function palace(b: Building, seed: number): Design {
       }
       // grand dome with spire
       box(ctx, -30, -168, 60, 8, SLAB);
-      ctx.beginPath();
-      ctx.moveTo(-26, -168);
-      ctx.bezierCurveTo(-30, -200, -6, -206, 0, -222);
-      ctx.bezierCurveTo(6, -206, 30, -200, 26, -168);
-      ctx.closePath();
-      ctx.fillStyle = dome;
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = INK;
-      ctx.stroke();
+      paperShape(ctx, dome, () => {
+        ctx.beginPath();
+        ctx.moveTo(-26, -168);
+        ctx.bezierCurveTo(-30, -200, -6, -206, 0, -222);
+        ctx.bezierCurveTo(6, -206, 30, -200, 26, -168);
+        ctx.closePath();
+      });
       line(ctx, 0, -222, 0, -234, INK, 1.5);
       circle(ctx, 0, -235, 2.5, GOLD);
       // entrance arch
-      ctx.beginPath();
-      ctx.moveTo(-12, 0);
-      ctx.lineTo(-12, -26);
-      ctx.arc(0, -26, 12, Math.PI, 0);
-      ctx.lineTo(12, 0);
-      ctx.closePath();
-      ctx.fillStyle = '#5a3a22';
-      ctx.fill();
-      ctx.stroke();
+      paperShape(ctx, '#5a3a22', () => {
+        ctx.beginPath();
+        ctx.moveTo(-12, 0);
+        ctx.lineTo(-12, -26);
+        ctx.arc(0, -26, 12, Math.PI, 0);
+        ctx.lineTo(12, 0);
+        ctx.closePath();
+      });
       signboard(ctx, 0, -48, 56, 9, buildingName(seed, 'housing'), GOLD_DARK);
       // the "lake": a filled-in pond with a fountain
       ellipse(ctx, 0, -3, 46, 6, WATER);
@@ -457,7 +452,7 @@ function skyTower(b: Building, seed: number): Design {
       // podium with lobby
       box(ctx, -70, -podium, 140, podium, CONCRETE);
       box(ctx, -40, -30, 80, 30, GLASS_HI);
-      ctx.strokeStyle = INK;
+      ctx.strokeStyle = 'rgba(60,40,20,0.35)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let x = -40; x < 40; x += 10) {
@@ -483,7 +478,7 @@ function skyTower(b: Building, seed: number): Design {
         ctx.lineTo(x0 + off + 20, -podium);
         ctx.fill();
       }
-      ctx.strokeStyle = 'rgba(20,30,45,0.55)';
+      ctx.strokeStyle = 'rgba(25,35,50,0.35)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let f = 1; f < floors; f++) {
@@ -505,11 +500,8 @@ function skyTower(b: Building, seed: number): Design {
         for (let tx = x0 + 6; tx < x0 + w; tx += 12) circle(ctx, tx, gy - 1, 3, LEAF, false);
       }
       ctx.restore();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = INK;
-      ctx.strokeRect(x0, towerTop, w, floors * fh);
       // crown and helipad
-      box(ctx, -40, towerTop - 18, 80, 18, '#23262d');
+      box(ctx, -40, towerTop - 18, 80, 18, '#2e3140');
       box(ctx, -52, towerTop - 21, 104, 5, '#59606b');
       for (let x = -48; x < 52; x += 8) box(ctx, x, towerTop - 21, 4, 2, '#ffd23f', false);
       roundBox(ctx, -6, towerTop - 30, 12, 9, 2, '#ffd23f');

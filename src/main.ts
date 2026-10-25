@@ -14,6 +14,7 @@ import { advance } from './sim/tick';
 import { createInitialState } from './state/initialState';
 import { loadGame, saveGame } from './state/save';
 import type { Action, GameState } from './state/types';
+import { addGrain } from './ui/grain';
 import { createHud } from './ui/hud';
 import { createPlotPanel } from './ui/panels/plotPanel';
 import { initToasts, showToast } from './ui/toasts';
@@ -28,6 +29,7 @@ const ctx = canvas.getContext('2d')!;
 const overlay = document.createElement('div');
 overlay.className = 'overlay';
 app.appendChild(overlay);
+addGrain(app, overlay);
 
 initToasts(overlay);
 const hud = createHud(overlay);

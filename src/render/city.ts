@@ -8,7 +8,7 @@ import { hashSeed, mulberry32 } from '../util/rng';
 import { getSprite, spriteScale } from './buildings/cache';
 import { signboard } from './buildings/common';
 import { ZOOM_MAX, ZOOM_MIN, type Camera } from './camera';
-import { box, ellipse, fitText, line, poly, range, roundBox, type Ctx } from './draw';
+import { box, ellipse, fitText, line, poly, range, roundBox, setPaperMode, type Ctx } from './draw';
 import { GOLD, GROUND, GROUND_DARK, INK, LEAF, LEAF_DARK } from './palette';
 import { FOOTPATH_H, drawBackdrop, drawPoles, drawStreet, drawTree } from './scene';
 
@@ -112,6 +112,8 @@ export function drawCity(
 ): void {
   const gy = groundScreenY(cam);
   const scale = spriteScale(dpr, cam.zoom);
+  // Per-frame shapes use the cheap offset shadow; sprites switch to blurred shadows while baking.
+  setPaperMode(false, dpr * cam.zoom);
   drawBackdrop(ctx, cam, gy, state.seed, scale, timeSec);
   drawStreet(ctx, cam, gy, state.seed);
 
@@ -138,7 +140,7 @@ export function drawCity(
     if (!p.owned) drawUnowned(ctx, p, state.seed, price);
     else if (!p.building) drawEmptyLot(ctx, p, state.seed);
     else {
-      ellipse(ctx, cx, 1, PLOT_W * 0.48, 5, 'rgba(43,35,32,0.22)', false);
+      ellipse(ctx, cx, 1, PLOT_W * 0.46, 4, 'rgba(70,42,16,0.18)', false);
       const s = getSprite(state.seed, p.index, p.building, scale);
       ctx.drawImage(s.canvas, cx - s.anchorX, -s.anchorY, s.w, s.h);
     }

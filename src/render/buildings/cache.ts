@@ -2,6 +2,7 @@
 import type { Category } from '../../config/buildings';
 import type { Building } from '../../state/types';
 import { hashSeed } from '../../util/rng';
+import { withPaperMode } from '../draw';
 import { housingDesign, type Design } from './housing';
 
 /** Fixed per category so adding categories never changes existing seeds. */
@@ -59,7 +60,7 @@ export function getSprite(runSeed: number, plotIndex: number, b: Building, scale
   ctx.scale(scale, scale);
   ctx.translate(design.halfW + PAD, design.height + PAD);
   ctx.lineJoin = 'round';
-  design.draw(ctx);
+  withPaperMode(true, scale, () => design.draw(ctx));
   const sprite: Sprite = { canvas, anchorX: design.halfW + PAD, anchorY: design.height + PAD, w, h, height: design.height };
   cache.set(key, sprite);
   pixels += canvas.width * canvas.height;

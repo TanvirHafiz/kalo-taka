@@ -34,12 +34,14 @@ Started early at your request ("make the properties look proper"). The first two
 
 ### Art notes
 
-- Flat fills, 2 px ink outlines, gradient only on the sky, one flat shadow ellipse per building.
+- Style: **paper cutout**, chosen from the Style Lab on 2026-10-25. Muted craft paper palette, no outlines. Every shape is a cut piece with slightly uneven edges and a soft drop shadow. The sky is flat paper with a torn horizon strip, and a paper grain overlay (CSS, generated once) sits over the canvas.
+- Shadows: cached sprites (buildings, skyline tiles) use a real blurred shadow, drawn once. Shapes drawn every frame (plots, poles, trees, badges, clouds) use a cheap offset copy instead. Script time is about 0.8 ms per frame, with no frame over 50 ms on a cold load.
+- The game spec says "2 px dark outlines"; the paper style replaces that by your choice.
 - Scene: sky, sun, drifting clouds, two parallax skyline layers (pre-rendered tiles), street trees, electric poles with tangled wires, tiled footpath, yellow and black curb, patched road.
 - Plots: for-sale plots have weeds, a bamboo fence and a "JOMI BIKROY" board with the price. Owned empty plots show bricks, sand and a "COMING SOON" board.
 - Housing T1 to T7: tin shed with clothesline and tube-well; semi-pucca with brick, tin roof and an optional cow; 2-floor dotola with rebar and a water tank; To-Let Bhaban (6 floors + 1 per 3 levels) with grills, balconies, ACs and a TO-LET banner; marble duplex with a gold gate and sleeping guards; Lake View Palace with domes and a fountain pond; glass Sky Tower with sky gardens, helipad and a neon name.
 - Seeds: building seed = hash(runSeed, plot, tier, fixed category index). Every floor and decor slot has its own seed, and each slot has a fixed level threshold, so upgrades only add detail.
-- Sprite cache: DPR capped at 2, two scale buckets, LRU capped at about 12M pixels. Script time is about 0.4 ms per frame.
+- Sprite cache: DPR capped at 2, two scale buckets, LRU capped at about 12M pixels.
 - Signboard names come from word lists in `strings.ts`, with a blocklist.
 - Font: Baloo 2, self-hosted via @fontsource (no Google dependency). Sprites redraw once it loads.
 - Zoom: wheel or pinch, 0.6x to 1.5x (as in the spec). Pan by dragging, or with Shift+wheel or a sideways trackpad swipe. On first load the zoom is fit to the screen.

@@ -1,47 +1,51 @@
-// Warm flat cartoon palette from the art spec. Visual only; no balance numbers here.
+// Paper cutout palette: muted craft paper colours. Visual only; no balance numbers here.
 
-export const INK = '#2b2320';
-export const LINE = 2;
+/** Thin detail lines (wires, grills, string). There are no outlines in the paper style. */
+export const INK = '#3a2e25';
+/** Drop shadow cast by each paper piece. */
+export const PAPER_SHADOW = 'rgba(70,42,16,0.34)';
 
-export const WALLS = ['#a8d8b9', '#f2a490', '#f3dc87', '#9ccbe6', '#f1e9da', '#c9b6e4', '#f6c49b', '#b8e0d2'];
-export const TIN = ['#8e9aa3', '#7fa7a3', '#7e95b5', '#9aa0a6'];
-export const RUST = '#b5653b';
-export const RUST_DARK = '#8a4527';
-export const BRICK = '#b4553a';
-export const BRICK_MORTAR = '#d9a48a';
-export const CONCRETE = '#c9c3b8';
-export const SLAB = '#e8e1d3';
-export const GLASS = '#4d6a85';
-export const GLASS_HI = '#7fa6c4';
-export const GLASS_LIT = '#ffd36e';
-export const GRILL = ['#2e6f5e', '#3b5b8c', '#6b2f2f', '#2b2320', '#8a6d1f'];
-export const SIGN_BG = ['#d7263d', '#1b9e5a', '#1e6fd9', '#ffc93c', '#c2185b', '#f2f2f2'];
-export const CLOTHES = ['#e63946', '#2a9d8f', '#f4a261', '#457b9d', '#ffb4a2', '#ffd166', '#8338ec', '#06d6a0', '#ef476f'];
-export const LEAF = '#4f9d4a';
-export const LEAF_DARK = '#3a7a37';
-export const POT = '#c8693d';
-export const GOLD = '#e0b33a';
-export const GOLD_DARK = '#a67c12';
-export const MARBLE = '#f4f1ea';
-export const WATER = '#5fb3d9';
-export const WATER_DARK = '#3f8fb5';
-export const SKIN = ['#8d5524', '#a0673b', '#c68642', '#e0ac69'];
+export const WALLS = ['#e07a5f', '#81b29a', '#f2cc8f', '#a8c5da', '#efe1c6', '#c3a6c9', '#f4a582', '#9fc7b5'];
+export const TIN = ['#9aa7ad', '#8fb3ad', '#97a6c2', '#a4a29a'];
+export const RUST = '#c47a4f';
+export const RUST_DARK = '#9a5634';
+export const BRICK = '#b8573e';
+export const BRICK_MORTAR = '#d9a58a';
+export const CONCRETE = '#cfc3ad';
+export const SLAB = '#f5ecd9';
+export const GLASS = '#56707f';
+export const GLASS_HI = '#7d98a6';
+export const GLASS_LIT = '#f6d58a';
+export const GRILL = ['#3f6b5c', '#46607f', '#6b3a35', '#3a2e25', '#8a6d2f'];
+export const SIGN_BG = ['#c8553d', '#4f7c6b', '#3d6fa3', '#e0a83a', '#a8466e', '#f5efe2'];
+/** Signboard backgrounds light enough to need dark text. */
+export const SIGN_LIGHT = ['#e0a83a', '#f5efe2'];
+export const CLOTHES = ['#e76f51', '#2a9d8f', '#e9c46a', '#264653', '#f4a261', '#d4a5a5', '#8d6a9f', '#90be6d', '#f28482'];
+export const LEAF = '#7aa95c';
+export const LEAF_DARK = '#5d8a48';
+export const POT = '#c47a4f';
+export const GOLD = '#d9a441';
+export const GOLD_DARK = '#a77a2a';
+export const MARBLE = '#f3eee4';
+export const WATER = '#7fb8cf';
+export const WATER_DARK = '#5c9ab3';
+export const SKIN = ['#8d5a3b', '#a8714a', '#c08a5c', '#d9a67a'];
 
-export const SKY_TOP = '#8fcde8';
-export const SKY_BOTTOM = '#fde6c4';
-export const SUN = '#fff1c2';
-export const CLOUD = '#ffffff';
-export const SKYLINE_FAR = '#c3c9dc';
-export const SKYLINE_NEAR = '#a2abc4';
-export const SKYLINE_NEAR_WIN = '#b9c1d6';
-export const GROUND = '#c7ad86';
-export const GROUND_DARK = '#a98f69';
-export const FOOTPATH = '#d6c9b1';
-export const FOOTPATH_LINE = '#b9aa8e';
-export const CURB_A = '#f2d24b';
-export const CURB_B = '#2b2320';
-export const ROAD = '#4b4d55';
-export const ROAD_PATCH = '#42444b';
-export const ROAD_MARK = '#e9e4d6';
-export const POLE = '#9b978f';
-export const WIRE = '#2b2320';
+export const SKY = '#bfe0e8';
+export const SKY_BAND = '#d6ebe6';
+export const SUN = '#f6bd60';
+export const CLOUD = '#fdfcf7';
+export const SKYLINE_FAR = '#aec3d2';
+export const SKYLINE_NEAR = '#8fa5b9';
+export const SKYLINE_NEAR_WIN = '#bccbd8';
+export const GROUND = '#cdb48c';
+export const GROUND_DARK = '#b39a72';
+export const FOOTPATH = '#e3cfa8';
+export const FOOTPATH_LINE = 'rgba(90,60,30,0.16)';
+export const CURB_A = '#f2c14e';
+export const CURB_B = '#4a3b30';
+export const ROAD = '#5b5a66';
+export const ROAD_PATCH = '#52515c';
+export const ROAD_MARK = '#efe6d2';
+export const POLE = '#b3aa9b';
+export const WIRE = '#3a2e25';
