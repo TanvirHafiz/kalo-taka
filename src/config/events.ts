@@ -101,7 +101,8 @@ export const DESTINATIONS: readonly { id: DestinationId; atStars: number }[] = [
 
 export const PRESTIGE = {
   /** offshoreStars = floor(sqrt(lifetimeEarnings / starDivisor)) - starsAlreadyEarned. */
-  starDivisor: 1e7 * MONEY_SCALE,
+  /** Spec: 1e7. Raised in the M6 balance pass so 3 stars are on offer after about 3.5 h. */
+  starDivisor: 1.1e9 * MONEY_SCALE,
   incomePerStar: 0.1,
   /** The Flee button pulses when the offer is at least this share of current stars. */
   pulseShare: 0.5,

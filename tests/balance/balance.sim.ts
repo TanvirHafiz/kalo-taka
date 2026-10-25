@@ -41,12 +41,16 @@ const median = (xs: (number | undefined)[]) => {
 };
 
 it('balance report', () => {
-  const runs = SEEDS.map((seed) => runBot({ seed, hours: HOURS }));
+  // a person reacts every few seconds, not every tick; 2 s and 10 s show the spread
+  const runs = SEEDS.map((seed) => runBot({ seed, hours: HOURS, decideEvery: Number(process.env.BALANCE_REACT ?? 5) }));
+  const fast = SEEDS.map((seed) => runBot({ seed, hours: HOURS, decideEvery: 2 }));
+  const slow = SEEDS.map((seed) => runBot({ seed, hours: HOURS, decideEvery: 10 }));
   const lines = [`Balance bot: ${SEEDS.length} seeds x ${HOURS} h ${overrides.join(' ')}`, ''];
   for (const [key, label, target] of TARGETS) {
     const med = median(runs.map((r) => r.milestones[key] as number | undefined));
     const off = target && med !== undefined ? `${Math.round(((med - target) / target) * 100)}%`.padStart(6) : '';
-    lines.push(`${label.padEnd(26)} ${fmtTime(med)}   target ${target ? fmtTime(target) : '      -'} ${off}`);
+    const at = (rs: typeof runs) => fmtTime(median(rs.map((x) => x.milestones[key] as number | undefined)));
+    lines.push(`${label.padEnd(26)} ${fmtTime(med)}   target ${target ? fmtTime(target) : '      -'} ${off.padEnd(6)}  (2 s ${at(fast)}, 10 s ${at(slow)})`);
   }
   const d = runs[0]!.milestones.districts;
   lines.push('', `districts (seed 1): ${d.map(fmtTime).join(', ')}`);

@@ -14,7 +14,7 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 
 ### Decisions made in M1
 
-- **Pacing:** spec numbers are used as written. With them the first merge takes about 2 hours, not 4 minutes. Retuning is deferred to the M6 balance pass. All numbers are in `src/config/`.
+- **Pacing:** spec numbers were used as written until M6. With them the first merge took about 2 hours, not 4 minutes. See the M6 balance pass for the tuned numbers. All numbers are in `src/config/`.
 - **Number format:** 2 decimals below 1,000 crore, then whole crore with Indian grouping (৳4,210 crore). Lakh crore from 1e12. CrCr from 1e14 (1 decimal). Then aa at 1e17, ab at 1e20, x1000 per step. Values are truncated, never rounded up, so ৳99.99 lakh never shows as ৳100.00 lakh. "K crore" from the tech-stack table is not used.
 - **Permit waits:** actions are instant until M4.
 - **Merging:** all 7 housing tiers are in config, so tier 3 can merge up to tier 7 already. Merge takes two plot numbers; the result always lands on the left plot.
@@ -144,10 +144,39 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 ## M6: Polish and balance (in progress)
 
 - [ ] Audio and settings panel; reduce-motion and keyboard navigation
-- [ ] Remaining districts
+- [x] Remaining districts
 - [x] A debug panel (hidden behind ?debug) with time-skip x10/x100, add money, set heat, trigger any event
-- [ ] Balance pass with a headless sim
+- [x] Balance pass with a headless sim
 - [ ] 60 fps on a mid-range Android phone with 40 buildings
+
+### Balance pass
+
+Run `npm run balance` (BALANCE_HOURS, BALANCE_REACT and BALANCE_SET="knob=value,..." to experiment). A greedy bot (`tests/balance/bot.ts`) plays the real sim for 4 simulated hours on 5 seeds. It follows Mamun's tutorial, then grows each category as a left-to-right chain, levels and merges by best payback, taps bags and briefcases, and reacts every 5 s. It never grabs land, bribes or hires nephews, so a sharp player is somewhat faster. `tests/pacing.test.ts` guards the early game in the normal test run.
+
+Median results against the spec targets (5 s reaction; a quick player at 2 s and a slow one at 10 s in brackets):
+
+| Milestone | Result | Target |
+|---|---|---|
+| First merge (tutorial) | 0:31 (bot), about 1.5 min for a person | |
+| Second merge | 3:35 (2:04 to 6:00) | 4 min (-10%) |
+| Clinic unlock (first tier 4 house) | 16:50 (14:18 to 24:10) | 15 min (+12%) |
+| First Specialized Hospital | 49:55 (46:50 to 60:20) | 1 h (-17%) |
+| 3 stars on offer (Flee worth doing) | 3:45 (3:17 to over 4 h) | 3 to 4 h (+7%) |
+
+What changed from the spec (only costs and waits; every income in the building tables is as written):
+- Merged buildings start at level 4, not 1 (your choice), so a merge never cuts income.
+- Upgrades: 8.5% of the spec formula with 1.13x growth per level instead of 1.18x. A Tin-Shed's full level 1 to 10 run costs about ৳2.6 lakh in game.
+- Merge fee: 0.4x the target tier's base cost instead of 2x, so merging two Tin-Sheds (৳3.2 lakh) costs about the same as one full upgrade run, at every tier (your request).
+- Plots are priced per district: each district starts at 30 s of its unlock income (Mirpara: ৳1 lakh in game) and grows 1.35x per plot you own there. With one global count (spec), Gulmohor and later districts cost hours of income per plot.
+- Permits: build 10 s (was 30), upgrade 1 s x tier per level (was 5), merge 20 s x tier (was 60).
+- Offshore Stars: divisor 1.1e9 instead of 1e7 (x100 in game). If you already fled under the old numbers, your next offer may read 0 for a while (it is clamped, never negative).
+- Mirpara opens Dhanpur around 28 min and Gulmohor around 77 min. Purbopur (৳100 crore/s) and Notun Char (৳5,000 crore/s) are for later runs, once stars have multiplied your income.
+- Known side effects to revisit: Permit Bhai Polash (25% shorter permits for a 4% skim) is a poor deal now that permits are seconds long, and speed money's ৳50,000 floor is more than early upgrades cost.
+
+### Districts (M6)
+
+- Purbopur (new town on sand, low and sparse, beige sky) and Notun Char (a river island, low with a river strip) join the street.
+- Each district tilts event odds while it is your newest: Mirpara load-shedding x1.5; Dhanpur dengue x1.5 and monsoon x1.25; Gulmohor VIP x2 and journalist x1.5; Purbopur flyover x2.5 and gas x1.5; Notun Char monsoon x2.5 and journalist x1.5.
 
 ### Debug panel
 

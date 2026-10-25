@@ -14,10 +14,10 @@ describe('merge rules', () => {
     expect(r.state.plots[4]!.owned).toBe(true);
   });
 
-  it('fee is 2x the target tier baseCost', () => {
-    expect(mergeFee(tin(10))).toBe(2 * 8000 * S);
+  it('fee is mergeFeeMult x the target tier baseCost', () => {
+    expect(mergeFee(tin(10))).toBe(BALANCE.mergeFeeMult * 8000 * S);
     const s = withBuildings({ 0: tin(10), 1: tin(10) }, 100_000 * S);
-    expect(act(s, { type: 'merge', a: 0, b: 1 }).state.taka).toBe(100_000 * S - 16_000 * S);
+    expect(act(s, { type: 'merge', a: 0, b: 1 }).state.taka).toBe(100_000 * S - BALANCE.mergeFeeMult * 8000 * S);
   });
 
   it('freed right plot keeps its grabbed flag', () => {

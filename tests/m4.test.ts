@@ -28,23 +28,23 @@ const plot = (s: GameState, slot: number) => s.plots.find((p) => p.slot === slot
 const at = (s: GameState, ms: number) => tick(s, (ms - s.lastSimTime) / 1000, ms);
 
 describe('permits', () => {
-  it('a build waits 30 s and earns nothing until the stamp lands', () => {
+  it('a build waits permitBuild s and earns nothing until the stamp lands', () => {
     let s = city({});
     s = { ...s, plots: s.plots.map((p) => (p.slot === 0 ? { ...p, owned: true } : p)) };
     s = applyAction(s, { type: 'build', plot: 0, category: 'housing' }).state;
     expect(plot(s, 0).building).toBeNull();
     expect(plot(s, 0).job?.kind).toBe('build');
     expect(applyAction(s, { type: 'build', plot: 0, category: 'housing' }).error).toBe('permitPending');
-    s = at(s, T0 + 29_000);
+    s = at(s, T0 + CORRUPTION.permitBuild * 1000 - 1000);
     expect(plot(s, 0).building).toBeNull();
-    s = at(s, T0 + 30_000);
+    s = at(s, T0 + CORRUPTION.permitBuild * 1000);
     expect(plot(s, 0).building).toEqual(H(1));
     expect(s.events.some((e) => e.kind === 'built')).toBe(true);
   });
 
-  it('an upgrade keeps earning at the old level until done; wait is 5 s x tier x levels', () => {
+  it('an upgrade keeps earning at the old level until done; wait is permitUpgradePerTier x tier x levels', () => {
     let s = city({ 0: H(3, 2) });
-    expect(permitSeconds(s, 'upgrade', 3, 2)).toBe(30);
+    expect(permitSeconds(s, 'upgrade', 3, 2)).toBe(CORRUPTION.permitUpgradePerTier * 3 * 2);
     const before = totalIncome(s);
     s = applyAction(s, { type: 'upgrade', plot: 0, count: 10 }).state;
     expect(totalIncome(s)).toBeCloseTo(before);
@@ -53,7 +53,7 @@ describe('permits', () => {
     expect(plot(s, 0).building!.level).toBe(10);
   });
 
-  it('a merge locks both plots for 60 s x target tier, both keep earning meanwhile', () => {
+  it('a merge locks both plots for permitMergePerTier x target tier, both keep earning meanwhile', () => {
     let s = city({ 0: H(1, 10), 1: H(1, 10) });
     const before = totalIncome(s);
     s = applyAction(s, { type: 'merge', a: 0, b: 1 }).state;

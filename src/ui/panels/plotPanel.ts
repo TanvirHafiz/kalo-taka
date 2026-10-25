@@ -58,7 +58,7 @@ function viewFor(state: GameState, id: number, count: UpgradeCount): View {
       lines: [],
       showToggle: false,
       buttons: [
-        { id: 'buy', label: STRINGS.plot.buyLegally, cost: plotCost(state), error: canBuyPlot(state, id), action: { type: 'buyPlot', plot: id } },
+        { id: 'buy', label: STRINGS.plot.buyLegally, cost: plotCost(state, p.district), error: canBuyPlot(state, id), action: { type: 'buyPlot', plot: id } },
         { id: 'grab', label: STRINGS.grab.action, note: STRINGS.grab.note, error: canGrab(state, id), action: { type: 'grab', plot: id } },
       ],
     };

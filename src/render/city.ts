@@ -367,7 +367,8 @@ export class CityRenderer {
       return p ? plotCenter(p) : 0;
     };
 
-    const price = formatTaka(plotCost(state));
+    // plot prices are per district
+    const prices = DISTRICTS.map((_, d) => formatTaka(plotCost(state, d)));
     const drawPlots = (c: Ctx, list: Shown[], shadows: boolean) => {
       for (const { p, b, s, fx } of list) {
         if (state.sideBiz?.plot === p.index && !b) {
@@ -403,7 +404,7 @@ export class CityRenderer {
         }
         c.save();
         rowTransform(c, p);
-        if (!p.owned) drawUnowned(c, p, state.seed, price);
+        if (!p.owned) drawUnowned(c, p, state.seed, prices[p.district] ?? '');
         else if (p.job?.kind === 'fill') drawFill(c, plotCenter(p), jobProgress(p.job), p.job.pond ?? 0, timeSec);
         else if (p.job?.kind === 'build') drawScaffold(c, plotCenter(p), 92);
         else drawEmptyLot(c, p, state.seed);

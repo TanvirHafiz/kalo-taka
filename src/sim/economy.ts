@@ -1,7 +1,7 @@
 import { BALANCE, CORRUPTION, NEPHEWS, type NephewId } from '../config/balance';
 import { EVENT_TUNING, PRESTIGE } from '../config/events';
 import { dayPhase } from './daycycle';
-import { BUILDINGS, NEIGHBOUR_RULES, PATIENT_CAPACITY, type Category, type TierDef } from '../config/buildings';
+import { BUILDINGS, DISTRICTS, NEIGHBOUR_RULES, PATIENT_CAPACITY, type Category, type TierDef } from '../config/buildings';
 import type { Building, GameState } from '../state/types';
 import { neighbours, plotById } from './layout';
 
@@ -144,7 +144,12 @@ export function plotsOwned(state: GameState): number {
   return state.plots.filter((p) => p.owned).length;
 }
 
-/** plotCost = 20000 * 1.35^plotsOwned */
-export function plotCost(state: GameState): number {
-  return Math.ceil(BALANCE.plotCostBase * BALANCE.plotCostGrowth ** plotsOwned(state));
+/**
+ * Price of the next plot in a district: the district's starting price x growth^(plots you own
+ * there). Spec: one global count from 20,000; per-district from M6 so later districts can be bought.
+ */
+export function plotCost(state: GameState, district = 0): number {
+  const start = Math.max(BALANCE.plotCostBase, (DISTRICTS[district]?.unlockIncome ?? 0) * BALANCE.plotIncomeSeconds);
+  const owned = state.plots.filter((p) => p.owned && p.district === district).length;
+  return Math.ceil(start * BALANCE.plotCostGrowth ** owned);
 }

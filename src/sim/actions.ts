@@ -23,7 +23,7 @@ export function canBuyPlot(state: GameState, plot: number): ErrorKey | null {
   const p = plotById(state, plot);
   if (!p) return 'noSuchPlot';
   if (p.owned) return 'plotAlreadyOwned';
-  if (state.taka < plotCost(state)) return 'notEnoughTaka';
+  if (state.taka < plotCost(state, p.district)) return 'notEnoughTaka';
   return null;
 }
 
@@ -141,7 +141,7 @@ export function applyAction(state: GameState, action: Action): ActionResult {
     case 'buyPlot': {
       const error = canBuyPlot(state, action.plot);
       if (error) return { state, error };
-      return { state: growWorld(withPlot(state, action.plot, { owned: true }, -plotCost(state))) };
+      return { state: growWorld(withPlot(state, action.plot, { owned: true }, -plotCost(state, plotById(state, action.plot)!.district))) };
     }
     case 'grab': {
       const error = canGrab(state, action.plot);

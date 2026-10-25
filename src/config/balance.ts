@@ -20,18 +20,28 @@ export const BALANCE = {
   /** Plots per district row. */
   plotsPerRow: 12,
 
-  plotCostBase: 20_000 * MONEY_SCALE,
+  /** Spec: 20,000. Tuned in the M6 balance pass so plots never stall the early game. */
+  plotCostBase: 1_000 * MONEY_SCALE,
   plotCostGrowth: 1.35,
+  /**
+   * Plots are priced per district (M6): each district starts at this many seconds of its unlock
+   * income (or plotCostBase, if higher) and grows by plotCostGrowth per plot you own there.
+   */
+  plotIncomeSeconds: 30,
 
-  upgradeCostGrowth: 1.18,
+  /** Spec: 1.18. Flatter since M6 so high levels are not a wall. */
+  upgradeCostGrowth: 1.13,
   /** Upgrade prices are this share of the spec formula (baseCost x growth^level). Tuned in M6. */
-  upgradeCostMult: 1,
+  upgradeCostMult: 0.085,
   /** Each level above 1 adds this fraction of base income. */
   incomePerLevel: 0.25,
   maxLevel: 10,
 
-  /** Merge fee is this multiple of the target tier's baseCost. */
-  mergeFeeMult: 2,
+  /**
+   * Merge fee is this multiple of the target tier's baseCost (spec: 2, tuned in M6). At 0.4 a merge
+   * costs about the same as one building's full upgrade run.
+   */
+  mergeFeeMult: 0.4,
   /**
    * Level a merged building starts at (spec: 1). At 4 the new building earns about what the two
    * maxed ones did, so a merge never cuts income (your choice, M6).
@@ -66,9 +76,10 @@ export const BALANCE = {
 /** Corruption layer tuning (M4). Times in seconds unless noted. */
 export const CORRUPTION = {
   /** Permit waits: build tier 1, upgrade per level per tier, merge per target tier. */
-  permitBuild: 30,
-  permitUpgradePerTier: 5,
-  permitMergePerTier: 60,
+  // spec: 30, 5 and 60; shortened in the M6 balance pass
+  permitBuild: 10,
+  permitUpgradePerTier: 1,
+  permitMergePerTier: 20,
   /** speedMoney = remaining s x income/s x this x (1 - influence / influenceDiscountDiv). */
   speedMoneyFactor: 0.5,
   influenceDiscountDiv: 200,

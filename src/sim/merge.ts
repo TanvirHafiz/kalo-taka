@@ -4,7 +4,7 @@ import type { Building, GameState } from '../state/types';
 import { maxTier, tierDef } from './economy';
 import { areNeighbours, neighbours, plotById } from './layout';
 
-/** Merge fee = 2x baseCost of the target tier. */
+/** Merge fee = mergeFeeMult x baseCost of the target tier. */
 export function mergeFee(b: Building): number {
   const target = tierDef(b.category, b.tier + 1);
   return target ? target.baseCost * BALANCE.mergeFeeMult : Infinity;

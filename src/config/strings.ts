@@ -422,7 +422,7 @@ export const MAMUN = {
     'Now upgrade it once, sir. Tenants love a fresh coat of paint.',
     'Buy the next plot, sir. My uncle at the bank owes me a favour.',
     'Build another Tin-Shed on it. Two is a business, one is a hobby.',
-    'Max both to level 10. I have arranged a small loan, sir.',
+    'Max both to level 10, sir. If you are short, I know a man.',
     'Merge them, sir. The permit office already said yes.',
     'Congratulations sir, you are now officially a developer.',
   ],
@@ -431,7 +431,7 @@ export const MAMUN = {
   next: 'Okay',
   offline: 'Sir, your nephews collected {amount} while you slept. They kept 75% for petrol.',
   idle: [
-    'Sir, permit office says 30 seconds. I said you are a busy man.',
+    'Sir, permit office says 10 seconds. I said you are a busy man.',
     'Very normal, sir. Everyone fills ponds. Ducks can relocate.',
     'Sir, tenants say no water 3 days. I said water is a state of mind.',
     'The committee wants to "discuss". I have prepared the envelope.',

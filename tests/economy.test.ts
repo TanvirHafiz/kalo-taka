@@ -31,11 +31,13 @@ describe('income', () => {
   });
 });
 
+const G = BALANCE.upgradeCostGrowth;
+
 describe('cost curves', () => {
-  it('upgradeCost = baseCost * 1.18^level, rounded up to whole Taka', () => {
-    expect(upgradeCost(tin(1))).toBe(Math.ceil(2000 * S * 1.18));
-    expect(upgradeCost(tin(9))).toBe(Math.ceil(2000 * S * 1.18 ** 9));
-    expect(upgradeCost({ category: 'housing', tier: 2, level: 3 })).toBe(Math.ceil(8000 * S * 1.18 ** 3));
+  it('upgradeCost = baseCost * growth^level * upgradeCostMult, rounded up to whole Taka', () => {
+    expect(upgradeCost(tin(1))).toBe(Math.ceil(2000 * S * G * BALANCE.upgradeCostMult));
+    expect(upgradeCost(tin(9))).toBe(Math.ceil(2000 * S * G ** 9 * BALANCE.upgradeCostMult));
+    expect(upgradeCost({ category: 'housing', tier: 2, level: 3 })).toBe(Math.ceil(8000 * S * G ** 3 * BALANCE.upgradeCostMult));
     expect(Number.isInteger(upgradeCost(tin(7)))).toBe(true);
   });
 
@@ -43,11 +45,11 @@ describe('cost curves', () => {
     expect(upgradeCostN(tin(1), 3)).toBe(upgradeCost(tin(1)) + upgradeCost(tin(2)) + upgradeCost(tin(3)));
   });
 
-  it('plotCost = 20000 * 1.35^plotsOwned, starting plot counts', () => {
+  it('plotCost = plotCostBase * 1.35^plotsOwned, starting plot counts', () => {
     const s = fresh();
-    expect(plotCost(s)).toBe(Math.ceil(20000 * S * 1.35));
+    expect(plotCost(s)).toBe(Math.ceil(BALANCE.plotCostBase * 1.35));
     const after = act({ ...s, taka: 1e9 }, { type: 'buyPlot', plot: 1 }).state;
-    expect(plotCost(after)).toBe(Math.ceil(20000 * S * 1.35 ** 2));
+    expect(plotCost(after)).toBe(Math.ceil(BALANCE.plotCostBase * 1.35 ** 2));
   });
 });
 
@@ -79,7 +81,7 @@ describe('actions', () => {
     const s = withBuildings({ 0: tin(3) }, 100_000 * S);
     const r = act(s, { type: 'upgrade', plot: 0 });
     expect(r.state.plots[0]!.building!.level).toBe(4);
-    expect(r.state.taka).toBe(100_000 * S - Math.ceil(2000 * S * 1.18 ** 3));
+    expect(r.state.taka).toBe(100_000 * S - Math.ceil(2000 * S * G ** 3 * BALANCE.upgradeCostMult));
     expect(act(withBuildings({ 0: tin(10) }), { type: 'upgrade', plot: 0 }).error).toBe('maxLevel');
   });
 

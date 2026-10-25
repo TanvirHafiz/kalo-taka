@@ -40,12 +40,20 @@ export interface RunResult {
 
 const T0 = 1_750_000_000_000;
 
-type Lane = { district: number; row: 'front' | 'back'; category: Category };
+/**
+ * A lane is a run of plots in one row: slots 0-6 (seven plots, enough for housing's tier 7 chain)
+ * or slots 7-11 (five plots, enough for the other ladders' 5 tiers). Housing only uses the first.
+ */
+type Lane = { district: number; row: 'front' | 'back'; half: 0 | 1; category: Category };
+const SPLIT = 7;
+const inLane = (p: Plot, half: number) => (p.slot < SPLIT ? 0 : 1) === half;
 
-const laneKey = (l: { district: number; row: string }) => `${l.district}:${l.row}`;
+const laneKey = (l: { district: number; row: string; half: number }) => `${l.district}:${l.row}:${l.half}`;
 
-function lanePlots(state: GameState, lane: { district: number; row: string }): Plot[] {
-  return state.plots.filter((p) => p.district === lane.district && p.row === lane.row).sort((a, b) => a.slot - b.slot);
+function lanePlots(state: GameState, lane: { district: number; row: string; half: number }): Plot[] {
+  return state.plots
+    .filter((p) => p.district === lane.district && p.row === lane.row && inLane(p, lane.half))
+    .sort((a, b) => a.slot - b.slot);
 }
 
 interface Proposal {
@@ -76,10 +84,10 @@ function propose(state: GameState, lane: Lane): Proposal | 'merge-wait' | null {
   if (r?.building && r.building.level < BALANCE.maxLevel) {
     return { action: { type: 'upgrade', plot: r.index }, cost: upgradeCost(r.building), gain: levelGain(state, r.building) };
   }
-  const next = row.find((p) => p.slot === (r ? r.slot + 1 : 0));
+  const next = r ? row.find((p) => p.slot === r.slot + 1) : row[0];
   if (!next) return null;
   const gain = buildingIncome(state, { category: lane.category, tier: 1, level: 1 });
-  if (!next.owned) return { action: { type: 'buyPlot', plot: next.index }, cost: plotCost(state) + buildCost(lane.category), gain };
+  if (!next.owned) return { action: { type: 'buyPlot', plot: next.index }, cost: plotCost(state, next.district) + buildCost(lane.category), gain };
   return { action: { type: 'build', plot: next.index, category: lane.category }, cost: buildCost(lane.category), gain };
 }
 
@@ -87,12 +95,20 @@ function assignLanes(state: GameState, lanes: Lane[]): Lane[] {
   const out = [...lanes];
   const taken = new Set(out.map(laneKey));
   for (const c of CATEGORIES) {
-    if (!state.unlocked.includes(c) || out.some((l) => l.category === c)) continue;
+    // a category gets another lane once all of its lanes are full
+    const mine = out.filter((l) => l.category === c);
+    if (!state.unlocked.includes(c) || mine.some((l) => propose(state, l) !== null)) continue;
     // the first free row, front rows first
-    const rows = [...new Set(state.plots.map((p) => `${p.district}:${p.row}`))]
-      .map((k) => ({ district: Number(k.split(':')[0]), row: k.split(':')[1] as 'front' | 'back' }))
-      .sort((a, b) => (a.row === b.row ? a.district - b.district : a.row === 'front' ? -1 : 1));
-    const free = rows.find((r) => !taken.has(laneKey(r)) && lanePlots(state, r).every((p) => !p.building && !p.job));
+    const rows = [...new Set(state.plots.map((p) => `${p.district}:${p.row}:${p.slot < SPLIT ? 0 : 1}`))]
+      .map((k) => {
+        const [d, row, half] = k.split(':');
+        return { district: Number(d), row: row as 'front' | 'back', half: Number(half) as 0 | 1 };
+      })
+      .filter((r) => c !== 'housing' || r.half === 0)
+      .sort((a, b) => (a.row === b.row ? a.district - b.district || a.half - b.half : a.row === 'front' ? -1 : 1));
+    const overlaps = (r: { district: number; row: string; half: number }) =>
+      out.some((l) => l.district === r.district && l.row === r.row && l.half === r.half);
+    const free = rows.find((r) => !taken.has(laneKey(r)) && !overlaps(r) && lanePlots(state, r).every((p) => !p.building && !p.job));
     if (free) {
       out.push({ ...free, category: c });
       taken.add(laneKey(free));
@@ -103,7 +119,7 @@ function assignLanes(state: GameState, lanes: Lane[]): Lane[] {
 
 /** A new player does what Mamun says, one step at a time. */
 function tutorialStep(s: GameState, act: (a: Action) => boolean): void {
-  const row = lanePlots(s, { district: 0, row: 'front' });
+  const row = lanePlots(s, { district: 0, row: 'front', half: 0 });
   const [a, b] = [row[0]!, row[1]!];
   switch (s.tutorial.step) {
     case 0: act({ type: 'build', plot: a.index, category: 'housing' }); break;
@@ -127,7 +143,7 @@ export function runBot({ seed, hours, decideEvery = 2 }: BotOptions): RunResult 
   let s: GameState = createInitialState(seed, T0);
   const m: Milestones = { districts: [] };
   const perMinute: RunResult['perMinute'] = [];
-  let lanes: Lane[] = [{ district: 0, row: 'front', category: 'housing' }];
+  let lanes: Lane[] = [{ district: 0, row: 'front', half: 0, category: 'housing' }];
   let merges = 0;
   const dt = BALANCE.tickMs;
   const end = T0 + hours * 3600_000;
@@ -136,6 +152,7 @@ export function runBot({ seed, hours, decideEvery = 2 }: BotOptions): RunResult 
   const act = (a: Action) => {
     const r = applyAction(s, a);
     if (!r.error) s = r.state;
+    if (!r.error && a.type === 'merge') merges++;
     return !r.error;
   };
 
@@ -159,12 +176,13 @@ export function runBot({ seed, hours, decideEvery = 2 }: BotOptions): RunResult 
           const p = propose(s, lane);
           if (!p || p === 'merge-wait') continue;
           if (p.gain === Infinity) {
-            if (act(p.action)) merges++;
+            act(p.action);
             continue;
           }
           if (!best || p.cost / p.gain < best.cost / best.gain) best = p;
         }
-        if (!best || s.taka < best.cost || !act(best.action)) break;
+        if (!best || s.taka < best.cost) break;
+        if (!act(best.action)) break;
       }
     }
 
@@ -172,7 +190,8 @@ export function runBot({ seed, hours, decideEvery = 2 }: BotOptions): RunResult 
     const tiers = (c: Category) => Math.max(0, ...s.plots.map((p) => (p.building?.category === c ? p.building.tier : 0)));
     const topHousing = tiers('housing');
     if (m.firstMerge === undefined && s.plots.some((p) => (p.building?.tier ?? 0) >= 2)) m.firstMerge = sec;
-    if (m.secondMerge === undefined && merges >= 2 && m.firstMerge !== undefined) m.secondMerge = sec;
+    // a merge counts once its permit clears and the new building stands
+    if (m.secondMerge === undefined && merges >= 2 && !s.plots.some((p) => p.job?.kind === 'merge')) m.secondMerge = sec;
     if (m.food === undefined && s.unlocked.includes('food')) m.food = sec;
     if (m.clinic === undefined && s.unlocked.includes('healthcare')) m.clinic = sec;
     if (m.hospital === undefined && tiers('healthcare') >= 4) m.hospital = sec;
