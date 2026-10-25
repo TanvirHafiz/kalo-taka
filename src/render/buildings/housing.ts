@@ -5,7 +5,8 @@ import { STRINGS } from '../../config/strings';
 import type { Building } from '../../state/types';
 import { buildingName } from '../../util/names';
 import { hashSeed, mulberry32 } from '../../util/rng';
-import { box, circle, ellipse, fitText, line, paperShape, pick, poly, range, roundBox, type Ctx } from '../draw';
+import { VISUAL } from '../../config/balance';
+import { addLight, addWindowLight, box, circle, ellipse, fitText, line, paperShape, pick, poly, range, roundBox, type Ctx } from '../draw';
 import {
   CLOTHES, CONCRETE, GLASS, GLASS_HI, GOLD, GOLD_DARK, GRILL, INK, LEAF, MARBLE, SIGN_BG, SLAB, TIN, WALLS, WATER, WATER_DARK,
 } from '../palette';
@@ -278,19 +279,20 @@ function duplex(b: Building, seed: number): Design {
       box(ctx, x0 - 3, -49, w + 6, 4, SLAB);
       box(ctx, x0 + 5, -101, w - 10, 4, SLAB);
       // arched windows
-      const archPath = (x: number, y: number, ww: number, hh: number) => () => {
-        ctx.beginPath();
-        ctx.moveTo(x, y + hh);
-        ctx.lineTo(x, y + ww / 2);
-        ctx.arc(x + ww / 2, y + ww / 2, ww / 2, Math.PI, 0);
-        ctx.lineTo(x + ww, y + hh);
-        ctx.closePath();
+      const archPath = (x: number, y: number, ww: number, hh: number) => (c: Ctx) => {
+        c.beginPath();
+        c.moveTo(x, y + hh);
+        c.lineTo(x, y + ww / 2);
+        c.arc(x + ww / 2, y + ww / 2, ww / 2, Math.PI, 0);
+        c.lineTo(x + ww, y + hh);
+        c.closePath();
       };
       const arch = (x: number, y: number, ww: number, hh: number) => {
         paperShape(ctx, trim, archPath(x - 2, y - 2, ww + 4, hh + 2));
-        archPath(x, y, ww, hh)();
+        archPath(x, y, ww, hh)(ctx);
         ctx.fillStyle = GLASS;
         ctx.fill();
+        addWindowLight(ctx, x + 1, y + ww / 2 - 2, ww - 2, hh - ww / 2 + 2, VISUAL.litWindowShare);
         line(ctx, x + ww / 2, y + 2, x + ww / 2, y + hh, trim, 1.2);
       };
       for (const wx of [-52, -24, 12, 40]) arch(wx, -88, 14, 30);
@@ -352,6 +354,7 @@ function palace(b: Building, seed: number): Design {
             const y = -100 + r * 34;
             box(ctx, wx - 1, y - 1, 12, 20, '#ffffff');
             box(ctx, wx, y + 5, 10, 14, GLASS, false);
+            addWindowLight(ctx, wx, y + 2, 10, 17, VISUAL.litWindowShare);
             ctx.beginPath();
             ctx.arc(wx + 5, y + 5, 5, Math.PI, 0);
             ctx.fillStyle = GLASS;
@@ -359,10 +362,10 @@ function palace(b: Building, seed: number): Design {
           }
         }
         box(ctx, sx - 2, -114, 42, 5, SLAB);
-        paperShape(ctx, dome, () => {
-          ctx.beginPath();
-          ctx.ellipse(sx + 19, -114, 14, 16, 0, Math.PI, 0);
-          ctx.closePath();
+        paperShape(ctx, dome, (c) => {
+          c.beginPath();
+          c.ellipse(sx + 19, -114, 14, 16, 0, Math.PI, 0);
+          c.closePath();
         });
         line(ctx, sx + 19, -130, sx + 19, -138, INK, 1.5);
       }
@@ -373,6 +376,7 @@ function palace(b: Building, seed: number): Design {
         for (const wx of [-26, -6, 14]) {
           box(ctx, wx - 1, y - 1, 14, 24, '#ffffff');
           box(ctx, wx, y + 6, 12, 17, GLASS, false);
+          addWindowLight(ctx, wx, y + 2, 12, 21, VISUAL.litWindowShare);
           ctx.beginPath();
           ctx.arc(wx + 6, y + 6, 6, Math.PI, 0);
           ctx.fillStyle = GLASS;
@@ -383,23 +387,23 @@ function palace(b: Building, seed: number): Design {
       }
       // grand dome with spire
       box(ctx, -30, -168, 60, 8, SLAB);
-      paperShape(ctx, dome, () => {
-        ctx.beginPath();
-        ctx.moveTo(-26, -168);
-        ctx.bezierCurveTo(-30, -200, -6, -206, 0, -222);
-        ctx.bezierCurveTo(6, -206, 30, -200, 26, -168);
-        ctx.closePath();
+      paperShape(ctx, dome, (c) => {
+        c.beginPath();
+        c.moveTo(-26, -168);
+        c.bezierCurveTo(-30, -200, -6, -206, 0, -222);
+        c.bezierCurveTo(6, -206, 30, -200, 26, -168);
+        c.closePath();
       });
       line(ctx, 0, -222, 0, -234, INK, 1.5);
       circle(ctx, 0, -235, 2.5, GOLD);
       // entrance arch
-      paperShape(ctx, '#5a3a22', () => {
-        ctx.beginPath();
-        ctx.moveTo(-12, 0);
-        ctx.lineTo(-12, -26);
-        ctx.arc(0, -26, 12, Math.PI, 0);
-        ctx.lineTo(12, 0);
-        ctx.closePath();
+      paperShape(ctx, '#5a3a22', (c) => {
+        c.beginPath();
+        c.moveTo(-12, 0);
+        c.lineTo(-12, -26);
+        c.arc(0, -26, 12, Math.PI, 0);
+        c.lineTo(12, 0);
+        c.closePath();
       });
       signboard(ctx, 0, -48, 56, 9, buildingName(seed, 'housing'), GOLD_DARK);
       // the "lake": a filled-in pond with a fountain
@@ -452,6 +456,7 @@ function skyTower(b: Building, seed: number): Design {
       // podium with lobby
       box(ctx, -70, -podium, 140, podium, CONCRETE);
       box(ctx, -40, -30, 80, 30, GLASS_HI);
+      addWindowLight(ctx, -40, -30, 80, 30, 1);
       ctx.strokeStyle = 'rgba(60,40,20,0.35)';
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -490,6 +495,9 @@ function skyTower(b: Building, seed: number): Design {
         ctx.lineTo(x, -podium);
       }
       ctx.stroke();
+      for (let f = 0; f < floors; f++) {
+        for (let c = 0; c < 8; c++) addWindowLight(ctx, x0 + c * 11.5 + 1, -podium - (f + 1) * fh + 1, 9.5, fh - 2, 0.45);
+      }
       // sky gardens appear with levels
       for (let g = 0; g < 4; g++) {
         if (!decorVisible(seed, 20, g, b.level)) continue;
@@ -522,7 +530,18 @@ function skyTower(b: Building, seed: number): Design {
       }
       ctx.fillStyle = neon;
       ctx.fillText(name.toUpperCase(), 0, towerTop - 8);
+      const font = ctx.font;
       ctx.restore();
+      addLight(ctx, (c) => {
+        c.font = font;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.shadowColor = neon;
+        c.shadowBlur = 14 * Math.hypot(c.getTransform().a, c.getTransform().b);
+        c.fillStyle = neon;
+        c.fillText(name.toUpperCase(), 0, towerTop - 8);
+        c.fillText(name.toUpperCase(), 0, towerTop - 8);
+      });
       if (decorVisible(seed, 30, 0, b.level)) pottedPalm(ctx, -62, -0);
       if (decorVisible(seed, 30, 1, b.level)) pottedPalm(ctx, 62, -0);
       if (decorVisible(seed, 30, 2, b.level)) dish(ctx, -26, towerTop - 21);

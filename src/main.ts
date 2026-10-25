@@ -6,7 +6,7 @@ import { BALANCE } from './config/balance';
 import { STRINGS, errorText, fmt } from './config/strings';
 import { clearSpriteCache } from './render/buildings/cache';
 import { ZOOM_MAX, ZOOM_MIN, createCamera, clampCamera, screenToWorldX } from './render/camera';
-import { drawCity, fitZoom, plotAtWorldX, worldWidth } from './render/city';
+import { CityRenderer, fitZoom, plotAtWorldX, worldWidth } from './render/city';
 import { clearSceneCache } from './render/scene';
 import { applyAction } from './sim/actions';
 import { tierDef } from './sim/economy';
@@ -35,6 +35,7 @@ initToasts(overlay);
 const hud = createHud(overlay);
 const panel = createPlotPanel(overlay, dispatch);
 const cam = createCamera();
+const city = new CityRenderer();
 
 // --- State ---------------------------------------------------------------
 let state: GameState;
@@ -52,12 +53,21 @@ function save(): void {
 }
 
 function dispatch(action: Action): void {
+  // snapshot first: after a merge the right plot is empty, but the animation needs both buildings
+  const before = state;
   const result = applyAction(state, action);
   if (result.error) {
     showToast(errorText(result.error));
     return;
   }
   state = result.state;
+  const now = Date.now();
+  if (action.type === 'merge') {
+    const l = Math.min(action.a, action.b), r = Math.max(action.a, action.b);
+    const oldL = before.plots[l]?.building, oldR = before.plots[r]?.building;
+    if (oldL && oldR) city.effects.merge(l, r, oldL, oldR, now);
+  } else if (action.type === 'build') city.effects.build(action.plot, now);
+  else if (action.type === 'upgrade') city.effects.upgrade(action.plot, now);
   if (action.type === 'build') {
     const b = state.plots[action.plot]?.building;
     if (b) showToast(fmt(STRINGS.toasts.built, { name: tierDef(b.category, b.tier)?.name ?? '' }));
@@ -186,7 +196,7 @@ function frame(): void {
     hud.update(state);
     panel.update(state);
   }
-  drawCity(ctx, state, cam, panel.selected, dpr, (performance.now() - bootTime) / 1000);
+  city.frame(ctx, state, cam, panel.selected, dpr, now, (performance.now() - bootTime) / 1000);
   requestAnimationFrame(frame);
 }
 

@@ -35,6 +35,51 @@ export function withPaperMode(blur: boolean, devicePxPerUnit: number, fn: () => 
   }
 }
 
+/**
+ * Night lights. While a sprite bakes, windows and neon register a draw call here; the cache then
+ * bakes them into a separate lights canvas that is shown after dark.
+ */
+export type LightDraw = (ctx: Ctx) => void;
+export interface LightOp {
+  /** Erase ops come from paper pieces laid over a window; they never count as a light. */
+  erase: boolean;
+  draw: LightDraw;
+}
+let lightSink: LightOp[] | null = null;
+let lightSeed = 0;
+/** Start (sink) or stop (null) collecting lights for a sprite. `seed` varies the lit pattern per building. */
+export function collectLights(sink: LightOp[] | null, seed = 0): void {
+  lightSink = sink;
+  lightSeed = seed % 9973;
+}
+/** Register a light, captured with the current transform so it lands in the right place. */
+export function addLight(ctx: Ctx, draw: LightDraw, erase = false): void {
+  if (!lightSink) return;
+  const m = ctx.getTransform();
+  lightSink.push({
+    erase,
+    draw: (c) => {
+      c.save();
+      c.setTransform(m);
+      draw(c);
+      c.restore();
+    },
+  });
+}
+/** A lit window: warm glow in the window rectangle. Returns whether this window is lit. */
+export function addWindowLight(ctx: Ctx, x: number, y: number, w: number, h: number, share: number): boolean {
+  if (!lightSink) return false;
+  if ((noise(x * 1.3 + 7 + lightSeed, y * 0.7 - lightSeed * 0.37) + 1) / 2 > share) return false;
+  const warm = noise(y, x) > 0.4 ? '#ffe7a8' : '#ffd27a';
+  addLight(ctx, (c) => {
+    c.shadowColor = 'rgba(255,190,90,0.9)';
+    c.shadowBlur = 6 * Math.hypot(c.getTransform().a, c.getTransform().b);
+    c.fillStyle = warm;
+    c.fillRect(x, y, w, h);
+  });
+  return true;
+}
+
 /** Deterministic noise in [-1, 1] from a point (quantised to 1/4 unit). */
 export function noise(x: number, y: number): number {
   let h = Math.imul(Math.round(x * 4) | 0, 0x27d4eb2d) ^ Math.imul(Math.round(y * 4) | 0, 0x165667b1);
@@ -81,7 +126,7 @@ function cutPath(ctx: Ctx, pts: number[]): void {
  * Fill a shape as a paper piece. `build` creates the path; it is called again for the shadow pass
  * because canvas paths are fixed in device space when built.
  */
-export function paperShape(ctx: Ctx, fill: string, build: () => void): void {
+export function paperShape(ctx: Ctx, fill: string, build: (c: Ctx) => void): void {
   ctx.save();
   if (mode.blur) {
     const s = mode.scale;
@@ -91,15 +136,25 @@ export function paperShape(ctx: Ctx, fill: string, build: () => void): void {
     ctx.shadowOffsetY = SHADOW_DY * s;
   } else {
     ctx.translate(SHADOW_DX, SHADOW_DY);
-    build();
+    build(ctx);
     ctx.fillStyle = PAPER_SHADOW;
     ctx.fill();
     ctx.translate(-SHADOW_DX, -SHADOW_DY);
   }
-  build();
+  build(ctx);
   ctx.fillStyle = mute(fill);
   ctx.fill();
   ctx.restore();
+  // a piece laid over a lit window hides that part of the light
+  addLight(
+    ctx,
+    (c) => {
+      c.globalCompositeOperation = 'destination-out';
+      build(c);
+      c.fill();
+    },
+    true,
+  );
 }
 
 export function box(ctx: Ctx, x: number, y: number, w: number, h: number, fill: string, paper = true): void {
@@ -108,7 +163,7 @@ export function box(ctx: Ctx, x: number, y: number, w: number, h: number, fill: 
     ctx.fillRect(x, y, w, h);
     return;
   }
-  paperShape(ctx, fill, () => cutPath(ctx, [x, y, x + w, y, x + w, y + h, x, y + h]));
+  paperShape(ctx, fill, (c) => cutPath(c, [x, y, x + w, y, x + w, y + h, x, y + h]));
 }
 
 export function poly(ctx: Ctx, pts: number[], fill: string, paper = true): void {
@@ -121,16 +176,16 @@ export function poly(ctx: Ctx, pts: number[], fill: string, paper = true): void 
     ctx.fill();
     return;
   }
-  paperShape(ctx, fill, () => cutPath(ctx, pts));
+  paperShape(ctx, fill, (c) => cutPath(c, pts));
 }
 
 export function roundBox(ctx: Ctx, x: number, y: number, w: number, h: number, r: number, fill: string, paper = true): void {
-  const build = () => {
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, r);
+  const build = (c: Ctx) => {
+    c.beginPath();
+    c.roundRect(x, y, w, h, r);
   };
-  build();
   if (!paper) {
+    build(ctx);
     ctx.fillStyle = mute(fill);
     ctx.fill();
     return;
@@ -143,12 +198,12 @@ export function circle(ctx: Ctx, x: number, y: number, r: number, fill: string, 
 }
 
 export function ellipse(ctx: Ctx, x: number, y: number, rx: number, ry: number, fill: string, paper = true): void {
-  const build = () => {
-    ctx.beginPath();
-    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  const build = (c: Ctx) => {
+    c.beginPath();
+    c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
   };
-  build();
   if (!paper) {
+    build(ctx);
     ctx.fillStyle = mute(fill);
     ctx.fill();
     return;

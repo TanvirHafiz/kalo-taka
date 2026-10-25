@@ -32,3 +32,36 @@ export const BALANCE = {
 
   autosaveMs: 10_000,
 } as const;
+
+/** Visual pacing and street-life tuning. Read by render/ (and later by event timing). */
+export const VISUAL = {
+  /** One full day and night, in real milliseconds (spec: 6 minutes). */
+  dayLengthMs: 360_000,
+  /** Day phase (0 = midnight, 0.5 = noon) where dawn and dusk are centred. */
+  dawnPhase: 0.25,
+  duskPhase: 0.75,
+  /** Half-width of the dawn/dusk transitions, in day phase. */
+  twilight: 0.06,
+  /** Share of windows that light up at night. */
+  litWindowShare: 0.62,
+
+  /**
+   * Traffic as a share of each lane's capacity: min + perDecade * log10(income/s + 1), capped.
+   * Above 1.0 the lanes are full and traffic becomes a permanent jam (the wealth signal).
+   */
+  trafficFillMin: 0.03,
+  trafficFillPerDecade: 0.13,
+  trafficFillMax: 1.08,
+  /** Lowest speed (world units/s) a jammed vehicle creeps at, so the jam is never frozen. */
+  jamCrawl: 3,
+  /** Pedestrians: base plus some per building, capped. */
+  peopleBase: 4,
+  peoplePerBuilding: 1.5,
+  peopleMax: 32,
+
+  /** Merge animation phases, in ms (spec: rise over 1.5 s). */
+  mergeShakeMs: 500,
+  mergeRiseMs: 1500,
+  buildRiseMs: 700,
+  upgradePopMs: 280,
+} as const;

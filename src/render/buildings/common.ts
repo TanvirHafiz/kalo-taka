@@ -1,5 +1,6 @@
 // Reusable building modules. Local space: ground at y = 0, up is negative y.
-import { box, circle, ellipse, fitText, line, pick, poly, range, roundBox, type Ctx } from '../draw';
+import { VISUAL } from '../../config/balance';
+import { addLight, addWindowLight, box, circle, ellipse, fitText, line, pick, poly, range, roundBox, type Ctx } from '../draw';
 import {
   BRICK, BRICK_MORTAR, CLOTHES, GLASS, GLASS_HI, GOLD, GOLD_DARK, INK, LEAF, LEAF_DARK, POT, RUST, RUST_DARK, SIGN_LIGHT, SKIN,
 } from '../palette';
@@ -30,26 +31,32 @@ export function windowUnit(ctx: Ctx, x: number, y: number, w: number, h: number,
     ctx.fillRect(x, y, w * 0.38, h);
     ctx.fillRect(x + w * 0.62, y, w * 0.38, h);
   }
+  drawGrill(ctx, x, y, w, h, o.grill, o.grillColor);
+  const lit = addWindowLight(ctx, x, y, w, h, VISUAL.litWindowShare);
+  if (lit && o.grill !== 'none') addLight(ctx, (c) => drawGrill(c, x, y, w, h, o.grill, 'rgba(58,46,37,0.85)'));
+}
+
+function drawGrill(ctx: Ctx, x: number, y: number, w: number, h: number, grill: GrillStyle, color: string): void {
   ctx.save();
   ctx.beginPath();
   ctx.rect(x, y, w, h);
   ctx.clip();
-  ctx.strokeStyle = o.grillColor;
+  ctx.strokeStyle = color;
   ctx.lineWidth = 1.3;
   ctx.beginPath();
-  if (o.grill === 'bars' || o.grill === 'grid') {
+  if (grill === 'bars' || grill === 'grid') {
     for (let gx = x + 3.5; gx < x + w; gx += 3.5) {
       ctx.moveTo(gx, y);
       ctx.lineTo(gx, y + h);
     }
   }
-  if (o.grill === 'grid') {
+  if (grill === 'grid') {
     for (let gy = y + h / 3; gy < y + h - 0.5; gy += h / 3) {
       ctx.moveTo(x, gy);
       ctx.lineTo(x + w, gy);
     }
   }
-  if (o.grill === 'diamond') {
+  if (grill === 'diamond') {
     for (let d = -h; d < w + h; d += 5) {
       ctx.moveTo(x + d, y);
       ctx.lineTo(x + d + h, y + h);

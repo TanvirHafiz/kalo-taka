@@ -2,7 +2,8 @@
 // sun, layered paper skyline, a footpath strip casting a shadow on the road, poles and wires.
 import { hashSeed, mulberry32 } from '../util/rng';
 import type { Camera } from './camera';
-import { box, circle, line, paperShape, pick, range, withPaperMode, type Ctx } from './draw';
+import { box, circle, line, noise, paperShape, pick, range, withPaperMode, type Ctx } from './draw';
+import { skyBody, type Lighting } from './lighting';
 import {
   CLOUD, CURB_A, CURB_B, FOOTPATH, FOOTPATH_LINE, LEAF, LEAF_DARK, PAPER_SHADOW, POLE, ROAD, ROAD_MARK, ROAD_PATCH, SKY,
   SKYLINE_FAR, SKYLINE_NEAR, SKYLINE_NEAR_WIN, SKY_BAND, SUN, WIRE,
@@ -16,6 +17,9 @@ const TILE_H = 280;
 interface Tile {
   canvas: HTMLCanvasElement;
   scale: number;
+  /** Window rectangles (near layer), so a lights tile can be baked without re-rolling the layout. */
+  windows: [number, number][];
+  lights?: HTMLCanvasElement;
 }
 
 const tiles = new Map<string, Tile>();
@@ -36,6 +40,7 @@ function skylineTile(seed: number, layer: 'far' | 'near', scale: number): Tile {
   const rng = mulberry32(hashSeed(seed, layer === 'far' ? 11 : 12));
   const base = TILE_H + 4;
   const color = layer === 'far' ? SKYLINE_FAR : SKYLINE_NEAR;
+  const windows: [number, number][] = [];
   withPaperMode(true, scale, () => {
     let x = 0;
     while (x < TILE_W) {
@@ -54,15 +59,51 @@ function skylineTile(seed: number, layer: 'far' | 'near', scale: number): Tile {
       if (layer === 'near') {
         ctx.fillStyle = SKYLINE_NEAR_WIN;
         for (let wy = base - h + 8; wy < base - 14; wy += 12) {
-          for (let wx = x + 5; wx < x + ww - 6; wx += 9) if (rng() < 0.7) ctx.fillRect(wx, wy, 4, 5);
+          for (let wx = x + 5; wx < x + ww - 6; wx += 9) {
+            if (rng() < 0.7) {
+              ctx.fillRect(wx, wy, 4, 5);
+              windows.push([wx, wy]);
+            }
+          }
         }
       }
       x += w + (layer === 'far' ? 2 : range(rng, 2, 8));
     }
   });
-  const tile = { canvas, scale };
+  const tile: Tile = { canvas, scale, windows };
   tiles.set(key, tile);
   return tile;
+}
+
+/** Lit windows for the near skyline, chosen by stable noise so the layout never changes. */
+function skylineLights(tile: Tile): HTMLCanvasElement {
+  if (tile.lights) return tile.lights;
+  const c = document.createElement('canvas');
+  c.width = tile.canvas.width;
+  c.height = tile.canvas.height;
+  const ctx = c.getContext('2d')!;
+  ctx.scale(tile.scale, tile.scale);
+  for (const [wx, wy] of tile.windows) {
+    if (noise(wx * 0.7, wy * 1.3) < 0.25) continue;
+    ctx.fillStyle = noise(wy, wx) > 0.3 ? '#ffe7a8' : '#ffcf7a';
+    ctx.fillRect(wx, wy, 4, 5);
+  }
+  tile.lights = c;
+  return c;
+}
+
+/** Night lights of the near skyline, drawn after the tint at the same parallax as the layer. */
+export function drawSkylineLights(ctx: Ctx, cam: Camera, groundY: number, seed: number, scale: number, alpha: number): void {
+  if (alpha < 0.02) return;
+  const tile = skylineTile(seed, 'near', scale);
+  const lights = skylineLights(tile);
+  const tw = TILE_W * cam.zoom;
+  const th = TILE_H * cam.zoom;
+  const offset = ((cam.x * cam.zoom * 0.45) % tw + tw) % tw;
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.85;
+  for (let x = -offset; x < cam.viewW; x += tw) ctx.drawImage(lights, x, groundY - th, tw, th);
+  ctx.restore();
 }
 
 function drawLayer(ctx: Ctx, cam: Camera, groundY: number, seed: number, layer: 'far' | 'near', parallax: number, scale: number): void {
@@ -74,17 +115,17 @@ function drawLayer(ctx: Ctx, cam: Camera, groundY: number, seed: number, layer: 
 }
 
 function cloud(ctx: Ctx, x: number, y: number, s: number): void {
-  paperShape(ctx, CLOUD, () => {
-    ctx.beginPath();
-    ctx.arc(x, y, 14 * s, Math.PI, 0);
-    ctx.arc(x + 20 * s, y - 6 * s, 18 * s, Math.PI, 0);
-    ctx.arc(x + 42 * s, y, 13 * s, Math.PI, 0);
-    ctx.closePath();
+  paperShape(ctx, CLOUD, (c) => {
+    c.beginPath();
+    c.arc(x, y, 14 * s, Math.PI, 0);
+    c.arc(x + 20 * s, y - 6 * s, 18 * s, Math.PI, 0);
+    c.arc(x + 42 * s, y, 13 * s, Math.PI, 0);
+    c.closePath();
   });
 }
 
 /** Everything behind the plots, in screen space. */
-export function drawBackdrop(ctx: Ctx, cam: Camera, groundY: number, seed: number, scale: number, timeSec: number): void {
+export function drawBackdrop(ctx: Ctx, cam: Camera, groundY: number, seed: number, scale: number, timeSec: number, light: Lighting): void {
   ctx.fillStyle = SKY;
   ctx.fillRect(0, 0, cam.viewW, groundY + 2);
 
@@ -102,8 +143,38 @@ export function drawBackdrop(ctx: Ctx, cam: Camera, groundY: number, seed: numbe
   ctx.fillStyle = SKY_BAND;
   ctx.fill();
 
-  const sunX = cam.viewW * 0.78 - cam.x * cam.zoom * 0.02;
-  circle(ctx, sunX, groundY * 0.28, 34 * cam.zoom, SUN);
+  // sunset and sunrise glow: warm the sky itself so the dusk tint does not just turn it grey
+  if (light.twilight > 0.02) {
+    const g = ctx.createLinearGradient(0, 0, 0, groundY);
+    g.addColorStop(0, `rgba(120,90,170,${0.35 * light.twilight})`);
+    g.addColorStop(0.55, `rgba(255,150,120,${0.55 * light.twilight})`);
+    g.addColorStop(1, `rgba(255,190,110,${0.8 * light.twilight})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, cam.viewW, groundY + 2);
+  }
+  // stars first, so the sun, moon and clouds sit in front of them
+  if (light.night > 0.05) {
+    const sr = mulberry32(hashSeed(seed, 6));
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 90; i++) {
+      const x = sr() * cam.viewW, y = sr() * groundY * 0.7;
+      ctx.globalAlpha = light.night * (0.5 + sr() * 0.5);
+      ctx.fillRect(x, y, 1.6, 1.6);
+    }
+    ctx.globalAlpha = 1;
+  }
+  const body = skyBody(light.phase);
+  const bx = cam.viewW * body.x - cam.x * cam.zoom * 0.02;
+  const by = groundY * body.y;
+  if (body.kind === 'sun') circle(ctx, bx, by, 34 * cam.zoom, SUN);
+  else {
+    // pale paper moon with a cut-out crescent
+    circle(ctx, bx, by, 26 * cam.zoom, '#fdf6dc');
+    ctx.fillStyle = 'rgba(46,56,120,0.35)';
+    ctx.beginPath();
+    ctx.arc(bx + 9 * cam.zoom, by - 4 * cam.zoom, 22 * cam.zoom, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   const rng = mulberry32(hashSeed(seed, 5));
   const span = cam.viewW + 300;
@@ -209,6 +280,8 @@ export function drawPoles(ctx: Ctx, xs: number[], seed: number): void {
     const rng = mulberry32(hashSeed(seed, 41, i));
     box(ctx, x - 3, top, 6, base - top, POLE);
     box(ctx, x - 16, top + 6, 32, 4, POLE);
+    line(ctx, x + 2, top + 30, x + 20, top + 25, POLE, 2.5);
+    box(ctx, x + 15, top + 22, 12, 5, '#6b6f80');
     ctx.strokeStyle = WIRE;
     ctx.lineWidth = 0.9;
     for (let c = 0; c < 3; c++) {
@@ -222,4 +295,32 @@ export function drawPoles(ctx: Ctx, xs: number[], seed: number): void {
       box(ctx, x - 5, -46, 10, 13, pick(rng, ['#f5efe2', '#e9c46a', '#a8c5da']));
     }
   }
+}
+
+/** Street lamp glow after dark, in world space, drawn over the night tint. */
+export function drawLampGlow(ctx: Ctx, xs: number[], alpha: number): void {
+  if (alpha < 0.02) return;
+  const top = -150;
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (const x of xs) {
+    const lx = x + 21, ly = top + 28;
+    const cone = ctx.createLinearGradient(0, ly, 0, FOOTPATH_H);
+    cone.addColorStop(0, `rgba(255,200,110,${0.32 * alpha})`);
+    cone.addColorStop(1, 'rgba(255,200,110,0)');
+    ctx.fillStyle = cone;
+    ctx.beginPath();
+    ctx.moveTo(lx - 5, ly);
+    ctx.lineTo(lx + 5, ly);
+    ctx.lineTo(lx + 46, FOOTPATH_H);
+    ctx.lineTo(lx - 46, FOOTPATH_H);
+    ctx.closePath();
+    ctx.fill();
+    const g = ctx.createRadialGradient(lx, ly, 1, lx, ly, 16);
+    g.addColorStop(0, `rgba(255,236,180,${alpha})`);
+    g.addColorStop(1, 'rgba(255,200,110,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(lx - 16, ly - 16, 32, 32);
+  }
+  ctx.restore();
 }

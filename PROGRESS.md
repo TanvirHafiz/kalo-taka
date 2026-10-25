@@ -25,12 +25,22 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 
 ## M2: Procedural city
 
-Started early at your request ("make the properties look proper"). The first two boxes are done.
-
 - [x] Side-scrolling street with front row of 12 plots, sky, road, footpath
 - [x] Full building generator for housing tiers 1 to 7 with offscreen-canvas caching
-- [ ] Day/night cycle, rickshaws and pedestrians, traffic density tied to income
-- [ ] Merge animation and upgrade visual changes (upgrade decor already grows with level; merge animation still to do)
+- [x] Day/night cycle, rickshaws and pedestrians, traffic density tied to income
+- [x] Merge animation and upgrade visual changes
+
+### Street life and day/night (M2)
+
+- Day/night: a full day takes 6 real minutes (`VISUAL.dayLengthMs`) and runs on the wall clock, so you can open the game at any time of day. At dusk the sky glows warm and a tint shifts the whole street to orange, then to blue-purple at night. Windows (about 60% lit, a different pattern per building), the Sky Tower neon, skyline windows, street lamps and headlights glow after dark. Paper pieces laid over a window (ACs, banners, laundry) block its light.
+- Traffic: rickshaws, green CNGs, dented two-tone buses and cars, plus a white SUV once you own a tier 5 building. Two lanes, each a loop with car-following. Density is a share of lane capacity that grows with log10(income/s). Above 1.0 (around crore/s) the road is a permanent creeping jam. Numbers are in `VISUAL` in `config/balance.ts`.
+- Pedestrians: tiny paper people in lungi, saree, or shirt and trousers walk the footpath. Some step out of buildings and some walk into them. The number grows with buildings.
+- Animations:
+  - Merge: both buildings shake for 0.5 s, then paper dust, a tower crane, and the new building rising floor by floor over 1.5 s.
+  - Build: rises from the ground.
+  - Upgrade: a squash pop and confetti.
+  - The lights follow these animations at night. With prefers-reduced-motion they are skipped.
+- Night lights are composed back to front in one layer, so poles, wires, people and traffic block the glow behind them. Performance on desktop with a busy street: about 1.1 ms script per frame by day and about 2 ms at night.
 
 ### Art notes
 

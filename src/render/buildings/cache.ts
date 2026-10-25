@@ -2,7 +2,7 @@
 import type { Category } from '../../config/buildings';
 import type { Building } from '../../state/types';
 import { hashSeed } from '../../util/rng';
-import { withPaperMode } from '../draw';
+import { collectLights, withPaperMode, type LightOp } from '../draw';
 import { housingDesign, type Design } from './housing';
 
 /** Fixed per category so adding categories never changes existing seeds. */
@@ -22,6 +22,15 @@ export interface Sprite {
   h: number;
   /** Height of the building itself above ground, in world units. */
   height: number;
+  /** Recorded light ops; baked into `lights` the first time it is needed after dark. */
+  lightOps: LightOp[] | null;
+  /** Lit windows and neon, same size as `canvas`. Undefined until baked, null if none. */
+  lights: HTMLCanvasElement | null | undefined;
+  key: string;
+}
+
+function spritePixels(s: Sprite): number {
+  return s.canvas.width * s.canvas.height + (s.lights ? s.lights.width * s.lights.height : 0);
 }
 
 const cache = new Map<string, Sprite>();
@@ -60,16 +69,43 @@ export function getSprite(runSeed: number, plotIndex: number, b: Building, scale
   ctx.scale(scale, scale);
   ctx.translate(design.halfW + PAD, design.height + PAD);
   ctx.lineJoin = 'round';
-  withPaperMode(true, scale, () => design.draw(ctx));
-  const sprite: Sprite = { canvas, anchorX: design.halfW + PAD, anchorY: design.height + PAD, w, h, height: design.height };
+  const ops: LightOp[] = [];
+  collectLights(ops, seed);
+  try {
+    withPaperMode(true, scale, () => design.draw(ctx));
+  } finally {
+    collectLights(null);
+  }
+  const hasLights = ops.some((o) => !o.erase);
+  const sprite: Sprite = {
+    canvas, anchorX: design.halfW + PAD, anchorY: design.height + PAD, w, h, height: design.height,
+    lightOps: hasLights ? ops : null,
+    lights: hasLights ? undefined : null,
+    key,
+  };
   cache.set(key, sprite);
-  pixels += canvas.width * canvas.height;
+  pixels += spritePixels(sprite);
   while (pixels > PIXEL_BUDGET && cache.size > 1) {
     const [oldKey, old] = cache.entries().next().value as [string, Sprite];
     cache.delete(oldKey);
-    pixels -= old.canvas.width * old.canvas.height;
+    pixels -= spritePixels(old);
   }
   return sprite;
+}
+
+/** The sprite's night lights, baked on first use. Null if the building has no lights. */
+export function spriteLights(sprite: Sprite): HTMLCanvasElement | null {
+  if (sprite.lights !== undefined) return sprite.lights;
+  const lights = document.createElement('canvas');
+  lights.width = sprite.canvas.width;
+  lights.height = sprite.canvas.height;
+  const lctx = lights.getContext('2d')!;
+  for (const op of sprite.lightOps ?? []) op.draw(lctx);
+  sprite.lights = lights;
+  sprite.lightOps = null;
+  // count it only while the sprite is still cached; an evicted sprite was already subtracted
+  if (cache.get(sprite.key) === sprite) pixels += lights.width * lights.height;
+  return lights;
 }
 
 export function clearSpriteCache(): void {
