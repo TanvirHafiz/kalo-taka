@@ -17,12 +17,14 @@ import { TUTORIAL_LAST } from './sim/tutorial';
 import { NEPHEW_IDS, nephewUnlocked } from './sim/corruption';
 import { districtCount, hasBackRow, plotById } from './sim/layout';
 import { tierDef } from './sim/economy';
+import { debugRewind } from './sim/debug';
 import { advance } from './sim/tick';
 import { createInitialState } from './state/initialState';
 import { loadGame, saveGame } from './state/save';
 import type { Action, GameState } from './state/types';
 import { addGrain } from './ui/grain';
 import { createButtonRow } from './ui/buttons';
+import { createDebugPanel } from './ui/debug';
 import { playCutscene } from './ui/cutscene';
 import { createMamun, type MamunButton } from './ui/mamun';
 import { createTicker } from './ui/ticker';
@@ -209,6 +211,7 @@ const buttons = createButtonRow(overlay, {
   flee: () => {
     fleeSheet.open();
     fleeSheet.update(state);
+    debug?.update(state);
   },
   build: openBuild,
   posters: () => {
@@ -343,13 +346,38 @@ window.addEventListener('keydown', (e) => {
 const bootTime = performance.now();
 let lastUiUpdate = 0;
 let lastFrame = Date.now();
+/** Debug time-skip multiplier (1 = real time). */
+let speed = 1;
+const SKIP_CHUNK_MS = 700;
+const debug = new URLSearchParams(location.search).has('debug')
+  ? createDebugPanel(overlay, {
+      get: () => state,
+      set: (next) => {
+        const before = state;
+        state = next;
+        drainEvents();
+        announce(before, state);
+        hud.update(state, city.districtInView(state, cam));
+        panel.update(state);
+      },
+      setSpeed: (x) => {
+        speed = x;
+      },
+    })
+  : null;
 const IDLE_MS = 100_000;
 let idleIn = IDLE_MS;
 function frame(): void {
+  const t0 = performance.now();
   const now = Date.now();
   const dtUi = Math.min(1000, now - lastFrame);
   lastFrame = now;
   const before = state;
+  // debug time skip: rewind the state's clocks a little and let advance() play the gap, in pieces
+  // small enough that it never switches to catch-up (which pauses events and the tutorial)
+  for (let skip = speed > 1 ? dtUi * (speed - 1) : 0; skip > 0; skip -= SKIP_CHUNK_MS) {
+    state = advance(debugRewind(state, Math.min(SKIP_CHUNK_MS, skip)), now).state;
+  }
   const r = advance(state, now);
   state = r.state;
   if (state !== before) {
@@ -378,6 +406,7 @@ function frame(): void {
     if (!mamun.current() && state.tutorial.done) mamun.say({ key: 'idle', text: pick(MAMUN.idle), buttons: [], ttl: 9000 });
   }
   city.frame(ctx, state, cam, panel.selected, dpr, now, (performance.now() - bootTime) / 1000);
+  debug?.frame(performance.now() - t0);
   requestAnimationFrame(frame);
 }
 

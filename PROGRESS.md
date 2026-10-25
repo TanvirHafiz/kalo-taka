@@ -141,6 +141,19 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 - You get back 25% of what it cost (its tier's base cost plus the upgrades it has had). Heat: housing +25 Anger and +15 Media, other buildings +5 Anger and +8 Media, plus +5 Committee either way.
 - Not possible during a permit, an inquiry or the tutorial. A cash bag on the building goes with it. The plot is free to build on at once.
 
+## M6: Polish and balance (in progress)
+
+- [ ] Audio and settings panel; reduce-motion and keyboard navigation
+- [ ] Remaining districts
+- [x] A debug panel (hidden behind ?debug) with time-skip x10/x100, add money, set heat, trigger any event
+- [ ] Balance pass with a headless sim
+- [ ] 60 fps on a mid-range Android phone with 40 buildings
+
+### Debug panel
+
+- Open the game with `?debug` at the end of the URL. A dark panel under the HUD has: time skip x1/x10/x100, +৳1 crore/+৳100 crore/+৳10,000 crore (added to Taka, not counted as earnings, so stars are unaffected), sliders for Media, Anger, Committee and Influence, start any event, finish all permits, fill every plot with maxed buildings, and a script-time-per-frame readout.
+- Time skip rewinds the save's clocks in 0.7 s pieces and lets the normal sim replay them, so events and the tutorial still run and a reload after skipping behaves normally. The day/night sky stays on the real clock.
+
 ## Changes requested after M4 (2026-10-25)
 
 - All money is 100x (MONEY_SCALE = 100 in config/balance.ts): you start with ৳50 lakh, a Tin-Shed costs ৳2 lakh and earns ৳500/s at level 1. Every cost, income, plot price, district threshold and price floor uses the same scale, so pacing is unchanged. Income-scaled prices (speed money, bribes, posters, nephews) follow automatically. Old saves get their Taka multiplied by 100 (save v4). Traffic is measured in spec-scale Taka, so the street is no busier.
