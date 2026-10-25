@@ -1,6 +1,6 @@
 // Slide-up card for the selected plot. Buttons are keyed by id and updated in place,
 // so refreshing four times a second never swallows a click.
-import { BALANCE } from '../../config/balance';
+import { BALANCE, CORRUPTION } from '../../config/balance';
 import { BUILDINGS, CATEGORIES, UNLOCK_HOUSING_TIER } from '../../config/buildings';
 import { STRINGS, errorText, fmt, type ErrorKey } from '../../config/strings';
 import { buildingSeed } from '../../render/buildings/cache';
@@ -97,12 +97,15 @@ function viewFor(state: GameState, id: number, count: UpgradeCount): View {
   }
   const b = p.building;
   const lines = [
-    fmt(STRINGS.plot.tierLevel, { tier: b.tier, level: b.level }),
+    fmt(STRINGS.plot.tierLevel, { tier: b.tier, maxTier: BUILDINGS[b.category].length, level: b.level, max: BALANCE.maxLevel }),
     fmt(STRINGS.plot.incomeLine, { rate: formatRate(plotIncome(state, id)) }),
   ];
   const bonus = neighbourBonus(state, id);
   if (Math.abs(bonus) > 0.001) lines.push(fmt(STRINGS.plot.bonusLine, { bonus: `${bonus > 0 ? '+' : ''}${Math.round(bonus * 100)}%` }));
   if (back) lines.push(STRINGS.plot.backRow);
+  if (b.category !== 'housing' && state.heat.media >= 1) {
+    lines.push(fmt(STRINGS.plot.mediaLine, { pct: `${Math.round((state.heat.media / CORRUPTION.mediaDiv) * 100)}%` }));
+  }
   if (b.category === 'healthcare') {
     lines.push(fmt(STRINGS.plot.patients, { n: patients(state, b) }));
     lines.push(STRINGS.testsByLevel[b.level] ?? '');

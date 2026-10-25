@@ -259,7 +259,7 @@ describe('save v2 -> v3', () => {
       heat: { media: 0, anger: 0, committee: 0 }, influence: 0, stars: 0,
     };
     const s = migrate(v2)!;
-    expect(s.version).toBe(3);
+    expect(s.version).toBe(4);
     expect(s.plots[0]!.job).toBeNull();
     expect(s.milestones).toEqual({ firstMerge: true, firstInquiry: false, firstTier5: true, maxBuildings: 2 });
     expect(s.nephews.rony).toEqual({ hired: false, level: 0 });
@@ -269,12 +269,51 @@ describe('save v2 -> v3', () => {
 describe('M4 fixes', () => {
   it('no bag on a frozen building; a waiting bag moves when the freeze starts; one talk show per inquiry', () => {
     let s = city({ 0: H(5), 1: H(1) });
-    s = { ...s, bag: { plot: plot(s, 0).index, kind: 'tip' } };
+    s = { ...s, bag: { plot: plot(s, 0).index, kind: 'chanda' } };
     s = maybeStartInquiry({ ...s, heat: { ...s.heat, committee: 100 } }, T0);
     expect(s.bag).toBeNull();
     s = at({ ...s, nextBagAt: T0 }, T0 + 250);
     expect(s.bag?.plot).toBe(plot(s, 1).index);
     s = applyAction(s, { type: 'inquiry', option: 'talkShow' }).state;
     expect(applyAction(s, { type: 'inquiry', option: 'talkShow' }).error).toBe('alreadyDone');
+  });
+});
+
+describe('save v3 -> v4 (money x100)', () => {
+  it('multiplies Taka and lifetime earnings, renames the tip bag to chanda, sets a start time', () => {
+    const v3 = {
+      ...createInitialState(5, T0), version: 3, taka: 1234, lifetimeEarnings: 999,
+      bag: { plot: 0, kind: 'tip' },
+    } as Record<string, unknown>;
+    delete v3.startedAt;
+    const s = migrate(v3)!;
+    expect(s).not.toBeNull();
+    expect(s.version).toBe(4);
+    expect(s.taka).toBe(123_400);
+    expect(s.lifetimeEarnings).toBe(99_900);
+    expect(s.bag?.kind).toBe('chanda');
+    expect(s.startedAt).toBe(T0);
+  });
+});
+
+import { calendar } from '../src/sim/daycycle';
+import { VISUAL } from '../src/config/balance';
+import { journalistCost } from '../src/sim/corruption';
+
+describe('calendar and journalists', () => {
+  it('counts days by day/night cycle and months of 30 days', () => {
+    const D = VISUAL.dayLengthMs;
+    const start = 10 * D + 5;
+    expect(calendar(start, start)).toEqual({ day: 1, month: 1, dayOfMonth: 1 });
+    expect(calendar(start, 11 * D)).toEqual({ day: 2, month: 1, dayOfMonth: 2 });
+    expect(calendar(start, start + 30 * D)).toEqual({ day: 31, month: 2, dayOfMonth: 1 });
+  });
+
+  it('paying off journalists cuts Media Heat by 25 at an Influence-discounted price', () => {
+    const s = { ...city({ 0: H(4) }), heat: { media: 60, anger: 0, committee: 0 } };
+    const r = applyAction(s, { type: 'payJournalists' });
+    expect(r.state.heat.media).toBe(35);
+    expect(s.taka - r.state.taka).toBe(journalistCost(s));
+    expect(journalistCost({ ...s, influence: 100 })).toBeLessThan(journalistCost(s));
   });
 });

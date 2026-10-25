@@ -97,6 +97,15 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 - Catch-up while the tab is hidden now steps at most 5 s at a time, cut at every permit, inquiry, poster and boost deadline, so heat, inquiries and permits play out in order.
 - Save format v3 (migrates from v2; milestones are worked out from your buildings).
 
+## Changes requested after M4 (2026-10-25)
+
+- All money is 100x (MONEY_SCALE = 100 in config/balance.ts): you start with ৳50 lakh, a Tin-Shed costs ৳2 lakh and earns ৳500/s at level 1. Every cost, income, plot price, district threshold and price floor uses the same scale, so pacing is unchanged. Income-scaled prices (speed money, bribes, posters, nephews) follow automatically. Old saves get their Taka multiplied by 100 (save v4). Traffic is measured in spec-scale Taka, so the street is no busier.
+- The "tip" cash bag is now "chanda".
+- HUD calendar: "Month M, Day D", counting one day per 6-minute day/night cycle since the game began, 30 days a month. It keeps counting across Flee to Canada.
+- On screens 760 px and wider, the building card and the Posters/Nephews sheets dock top-right, and toasts sit bottom-right. Phones keep the bottom sheet.
+- Media Heat already cut food, shop and hospital customers (up to 40%) and draws the committee above 60. That is now spelled out in the gauge tooltip and on the building card. A new "Pay off journalists" option (Posters sheet) costs 45 s of income (Influence discount applies) and removes 25 Media Heat.
+- Buildings show current and max level ("Lv 3/10"); the card shows "Tier 2/7, Level 3/10".
+
 ### Art notes
 
 - Style: **paper cutout**, chosen from the Style Lab on 2026-10-25. Muted craft paper palette, no outlines. Every shape is a cut piece with slightly uneven edges and a soft drop shadow. The sky is flat paper with a torn horizon strip, and a paper grain overlay (CSS, generated once) sits over the canvas.

@@ -196,6 +196,10 @@ html, body {
 .sheet-row-buttons button.quiet { background: var(--paper); color: var(--accent); box-shadow: 0 1px 2px var(--shadow); }
 .sheet-row-buttons button:disabled { background: var(--kraft); color: var(--muted); cursor: not-allowed; box-shadow: none; }
 .sheet-row-buttons button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.hud-calendar {
+  align-self: center; padding: 2px 8px; border-radius: 8px; white-space: nowrap;
+  background: var(--paper-2); font-weight: 700; font-size: 12px; color: var(--muted);
+}
 .hud-skim {
   align-self: center; padding: 2px 8px; border-radius: 8px; white-space: nowrap;
   background: #f6d7cf; color: var(--accent); font-weight: 800; font-size: 12px;
@@ -264,4 +268,25 @@ html, body {
 
 @media (prefers-reduced-motion: reduce) {
   .panel, .toast { transition: none; animation: none; }
+}
+
+/* Wide screens: the card and sheets dock in the empty top-right corner instead of covering the street. */
+@media (min-width: 760px) {
+  .panel {
+    left: auto;
+    right: max(12px, env(safe-area-inset-right));
+    top: max(12px, env(safe-area-inset-top));
+    bottom: auto;
+    width: min(380px, calc(100% - 24px));
+    max-height: calc(100% - 100px);
+    overflow-y: auto;
+    border-radius: 18px;
+    padding-bottom: 16px;
+    transform: translateX(calc(100% + 24px));
+    box-shadow: var(--lift);
+  }
+  .panel.open { transform: translateX(0); }
+  .panel.open ~ .button-row { display: flex; }
+  .hud { left: max(12px, env(safe-area-inset-left)); transform: none; }
+  .toasts { left: auto; right: max(12px, env(safe-area-inset-right)); transform: none; top: auto; bottom: 76px; }
 }

@@ -1,5 +1,5 @@
 // Street life rules: density and the lane traffic model. Pure (no DOM), so it is unit-tested.
-import { VISUAL } from '../config/balance';
+import { MONEY_SCALE, VISUAL } from '../config/balance';
 
 export type VehicleKind = 'rickshaw' | 'cng' | 'car' | 'bus' | 'suv';
 
@@ -29,7 +29,8 @@ export interface Vehicle {
 
 /** Share of lane capacity in use for an income per second (above 1 means a jam). */
 export function trafficFill(incomePerSec: number): number {
-  const f = VISUAL.trafficFillMin + VISUAL.trafficFillPerDecade * Math.log10(Math.max(0, incomePerSec) + 1);
+  // measured in spec-scale Taka, so the money scale does not change how busy the street is
+  const f = VISUAL.trafficFillMin + VISUAL.trafficFillPerDecade * Math.log10(Math.max(0, incomePerSec) / MONEY_SCALE + 1);
   return Math.min(VISUAL.trafficFillMax, f);
 }
 

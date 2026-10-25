@@ -18,3 +18,10 @@ export function nightness(phase: number): number {
   const dusk = smooth((phase - (VISUAL.duskPhase - w)) / (2 * w));
   return phase < 0.5 ? dawn : dusk;
 }
+
+/** In-game calendar since the game began: one day per day/night cycle, 30 days a month. */
+export function calendar(startedAt: number, nowMs: number): { day: number; month: number; dayOfMonth: number } {
+  const d = VISUAL.dayLengthMs;
+  const days = Math.max(0, Math.floor(nowMs / d) - Math.floor(startedAt / d));
+  return { day: days + 1, month: Math.floor(days / VISUAL.daysPerMonth) + 1, dayOfMonth: (days % VISUAL.daysPerMonth) + 1 };
+}

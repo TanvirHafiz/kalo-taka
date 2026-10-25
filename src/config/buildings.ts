@@ -11,11 +11,15 @@ export interface TierDef {
   baseCost: number;
 }
 
+import { MONEY_SCALE } from './balance';
+
 const LAKH = 100_000;
 const CRORE = 10_000_000;
 
+/** Spec numbers below; MONEY_SCALE is applied once at the end. */
+
 // Building ladders from the spec. Only tier 1 can be built; higher tiers come from merging.
-export const BUILDINGS: Record<Category, TierDef[]> = {
+const SPEC_LADDERS: Record<Category, TierDef[]> = {
   housing: [
     { tier: 1, name: 'Tin-Shed Ghor', baseIncome: 5, baseCost: 2_000 },
     { tier: 2, name: 'Semi-Pucca Bari', baseIncome: 18, baseCost: 8_000 },
@@ -47,6 +51,13 @@ export const BUILDINGS: Record<Category, TierDef[]> = {
     { tier: 5, name: 'Galaxy Mall', baseIncome: 90_000, baseCost: 10 * CRORE },
   ],
 };
+
+export const BUILDINGS: Record<Category, TierDef[]> = Object.fromEntries(
+  Object.entries(SPEC_LADDERS).map(([cat, tiers]) => [
+    cat,
+    tiers.map((t) => ({ ...t, baseIncome: t.baseIncome * MONEY_SCALE, baseCost: t.baseCost * MONEY_SCALE })),
+  ]),
+) as Record<Category, TierDef[]>;
 
 /**
  * A category unlocks the first time the player owns housing of this tier, and stays unlocked.
@@ -84,6 +95,6 @@ export interface DistrictDef {
 /** Districts unlock in order as income grows. The remaining two arrive in M6. */
 export const DISTRICTS: readonly DistrictDef[] = [
   { name: 'Mirpara', unlockIncome: 0 },
-  { name: 'Dhanpur', unlockIncome: 5_000 },
-  { name: 'Gulmohor', unlockIncome: 2 * LAKH },
+  { name: 'Dhanpur', unlockIncome: 5_000 * MONEY_SCALE },
+  { name: 'Gulmohor', unlockIncome: 2 * LAKH * MONEY_SCALE },
 ];

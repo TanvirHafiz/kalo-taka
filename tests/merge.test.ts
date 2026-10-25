@@ -1,3 +1,4 @@
+import { MONEY_SCALE as S } from '../src/config/balance';
 import { describe, expect, it } from 'vitest';
 
 import { mergeBlocker, mergeFee, mergePartners } from '../src/sim/merge';
@@ -14,9 +15,9 @@ describe('merge rules', () => {
   });
 
   it('fee is 2x the target tier baseCost', () => {
-    expect(mergeFee(tin(10))).toBe(2 * 8000);
-    const s = withBuildings({ 0: tin(10), 1: tin(10) }, 100_000);
-    expect(act(s, { type: 'merge', a: 0, b: 1 }).state.taka).toBe(100_000 - 16_000);
+    expect(mergeFee(tin(10))).toBe(2 * 8000 * S);
+    const s = withBuildings({ 0: tin(10), 1: tin(10) }, 100_000 * S);
+    expect(act(s, { type: 'merge', a: 0, b: 1 }).state.taka).toBe(100_000 * S - 16_000 * S);
   });
 
   it('freed right plot keeps its grabbed flag', () => {

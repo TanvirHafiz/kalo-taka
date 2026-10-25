@@ -5,7 +5,7 @@ export function noNephews(): GameState['nephews'] {
   return { rony: { hired: false, level: 0 }, polash: { hired: false, level: 0 }, mithu: { hired: false, level: 0 }, dipu: { hired: false, level: 0 } };
 }
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 /** Plots of one district row, appended after the existing ones with fresh ids. */
 export function districtRow(existing: readonly Plot[], district: number, row: Row): Plot[] {
@@ -22,6 +22,7 @@ export function createInitialState(seed: number, now: number): GameState {
   return {
     version: SAVE_VERSION,
     seed,
+    startedAt: now,
     taka: BALANCE.startingTaka,
     lifetimeEarnings: 0,
     plots,

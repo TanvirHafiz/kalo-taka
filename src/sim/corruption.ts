@@ -79,6 +79,11 @@ export function inquiryCost(state: GameState, option: 'talkShow' | 'donation' | 
   return Math.max(CORRUPTION.minPrice, Math.ceil(incomeSeconds(state, secs) * bribeDiscount(state)));
 }
 
+/** Paying off journalists (a bribe, so Influence gives a discount). */
+export function journalistCost(state: GameState): number {
+  return Math.max(CORRUPTION.minPrice, Math.ceil(incomeSeconds(state, CORRUPTION.journalistSeconds) * bribeDiscount(state)));
+}
+
 /** Housing income for the water pump fix. */
 export function waterPumpCost(state: GameState): number {
   let housing = 0;

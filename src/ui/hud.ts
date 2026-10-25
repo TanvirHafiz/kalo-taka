@@ -4,6 +4,7 @@
 import { DISTRICTS } from '../config/buildings';
 import { STRINGS, fmt } from '../config/strings';
 import { effectiveInfluence, totalSkim } from '../sim/corruption';
+import { calendar } from '../sim/daycycle';
 import { isBoosted, totalIncome } from '../sim/economy';
 import type { GameState } from '../state/types';
 import { formatRate, formatTaka } from '../util/money';
@@ -22,8 +23,8 @@ const ICONS: Record<string, string> = {
   stars: '<path d="M8 2.5l1.7 3.5 3.8.5-2.8 2.6.7 3.8L8 11.1l-3.4 1.8.7-3.8L2.5 6.5l3.8-.5z"/>',
 };
 
-function gauge(key: string, label: string): string {
-  return `<div class="gauge" data-g="${key}" title="${label}">
+function gauge(key: string, label: string, help: string): string {
+  return `<div class="gauge" data-g="${key}" title="${help}">
     <svg viewBox="0 0 16 16" aria-hidden="true">${ICONS[key]}</svg>
     <span class="gauge-label">${label}</span>
     <span class="gauge-bar"><i></i></span>
@@ -40,14 +41,15 @@ export function createHud(root: HTMLElement): Hud {
       <div class="hud-item hud-taka"><span class="hud-label">${STRINGS.hud.taka}</span><span class="hud-value" data-k="taka"></span></div>
       <div class="hud-item"><span class="hud-label">${STRINGS.hud.income}</span><span class="hud-value" data-k="income"></span></div>
       <div class="hud-district" data-k="district"></div>
+      <div class="hud-calendar" data-k="calendar"></div>
       <div class="hud-skim" data-k="skim" hidden></div>
     </div>
     <div class="hud-gauges">
-      ${gauge('media', STRINGS.hud.media)}
-      ${gauge('anger', STRINGS.hud.anger)}
-      ${gauge('committee', STRINGS.hud.committee)}
-      ${gauge('influence', STRINGS.hud.influence)}
-      <div class="gauge gauge-stars" data-g="stars" title="${STRINGS.hud.stars}">
+      ${gauge('media', STRINGS.hud.media, STRINGS.hud.mediaHelp)}
+      ${gauge('anger', STRINGS.hud.anger, STRINGS.hud.angerHelp)}
+      ${gauge('committee', STRINGS.hud.committee, STRINGS.hud.committeeHelp)}
+      ${gauge('influence', STRINGS.hud.influence, STRINGS.hud.influenceHelp)}
+      <div class="gauge gauge-stars" data-g="stars" title="${STRINGS.hud.starsHelp}">
         <svg viewBox="0 0 16 16" aria-hidden="true">${ICONS.stars}</svg>
         <span class="gauge-label">${STRINGS.hud.stars}</span>
         <span class="gauge-val"></span>
@@ -59,6 +61,7 @@ export function createHud(root: HTMLElement): Hud {
   const income = el.querySelector<HTMLElement>('[data-k="income"]')!;
   const district = el.querySelector<HTMLElement>('[data-k="district"]')!;
   const skimEl = el.querySelector<HTMLElement>('[data-k="skim"]')!;
+  const calEl = el.querySelector<HTMLElement>('[data-k="calendar"]')!;
   const avatar = el.querySelector<HTMLCanvasElement>('.hud-avatar')!;
   const actx = avatar.getContext('2d')!;
   let avatarKey = '';
@@ -78,6 +81,8 @@ export function createHud(root: HTMLElement): Hud {
       income.classList.toggle('boosted', boosted);
       income.title = boosted ? STRINGS.hud.boost : '';
       district.textContent = DISTRICTS[d]?.name ?? '';
+      const cal = calendar(state.startedAt, state.lastSimTime);
+      calEl.textContent = fmt(STRINGS.hud.calendar, { m: cal.month, d: cal.dayOfMonth });
       setGauge('media', state.heat.media);
       setGauge('anger', state.heat.anger);
       setGauge('committee', state.heat.committee);

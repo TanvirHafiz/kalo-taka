@@ -1,5 +1,11 @@
 // All tuning numbers live here. Logic must read from this file, never hardcode.
 
+/**
+ * Every amount of Taka in the game (costs, incomes, thresholds) is the spec's number times this.
+ * Costs and incomes scale together, so pacing is unchanged; only the numbers on screen grow.
+ */
+export const MONEY_SCALE = 100;
+
 export const BALANCE = {
   /** Fixed simulation step in milliseconds (4 ticks per second). */
   tickMs: 250,
@@ -8,13 +14,13 @@ export const BALANCE = {
   /** Gap (in ms) after which a return to the tab is reported with a toast. */
   catchUpToastMinMs: 5000,
 
-  startingTaka: 50_000,
+  startingTaka: 50_000 * MONEY_SCALE,
   startingPlots: 1,
 
   /** Plots per district row. */
   plotsPerRow: 12,
 
-  plotCostBase: 20_000,
+  plotCostBase: 20_000 * MONEY_SCALE,
   plotCostGrowth: 1.35,
 
   upgradeCostGrowth: 1.18,
@@ -111,8 +117,11 @@ export const CORRUPTION = {
   /** Nephews: hire costs this many seconds of income; upgrades cost these (5 levels). */
   nephewHireSeconds: 120,
   nephewUpgradeSeconds: [180, 360, 720, 1440, 2880],
+  /** Paying off journalists: seconds of income (Influence discount applies) and Media Heat removed. */
+  journalistSeconds: 45,
+  journalistMedia: 25,
   /** Floor for every income-scaled price (so nothing is free when income is tiny). */
-  minPrice: 500,
+  minPrice: 500 * MONEY_SCALE,
 } as const;
 
 export type NephewId = 'rony' | 'polash' | 'mithu' | 'dipu';
@@ -142,6 +151,8 @@ export const NEPHEW_MAX_LEVEL = 5;
 export const VISUAL = {
   /** One full day and night, in real milliseconds (spec: 6 minutes). */
   dayLengthMs: 360_000,
+  /** Days in an in-game month (for the calendar). */
+  daysPerMonth: 30,
   /** Day phase (0 = midnight, 0.5 = noon) where dawn and dusk are centred. */
   dawnPhase: 0.25,
   duskPhase: 0.75,

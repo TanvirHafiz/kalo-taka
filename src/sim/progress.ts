@@ -8,7 +8,7 @@ import { rngStep } from '../util/rng';
 import { plotsOwned, totalIncome } from './economy';
 import { districtCount, hasBackRow } from './layout';
 
-const BAG_KINDS: readonly BagKind[] = ['bhara', 'tip', 'commission'];
+const BAG_KINDS: readonly BagKind[] = ['bhara', 'chanda', 'commission'];
 
 /** Random value in [a, b) and the advanced rng state. */
 function between(rng: number, a: number, b: number): [number, number] {

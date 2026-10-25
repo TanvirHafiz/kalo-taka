@@ -140,7 +140,7 @@ describe('cash bags and briefcase', () => {
 
   it('merging away the bag building removes the bag', () => {
     let s = place(world(), [[0, 'front', 0, b('housing', 1, 10)], [0, 'front', 1, b('housing', 1, 10)]]);
-    s = { ...s, bag: { plot: id(s, 0, 'front', 1), kind: 'tip' } };
+    s = { ...s, bag: { plot: id(s, 0, 'front', 1), kind: 'chanda' } };
     const r = act(s, { type: 'merge', a: id(s, 0, 'front', 0), b: id(s, 0, 'front', 1) });
     expect(r.state.bag).toBeNull();
   });
@@ -204,7 +204,7 @@ describe('save v1 -> v2', () => {
     };
     const s = migrate(v1)!;
     expect(s).not.toBeNull();
-    expect(s.version).toBe(3);
+    expect(s.version).toBe(4);
     expect(s.plots[3]).toMatchObject({ district: 0, slot: 3, row: 'front' });
     expect(s.unlocked).toEqual(['housing', 'food', 'healthcare', 'retail']);
     expect(s.bag).toBeNull();

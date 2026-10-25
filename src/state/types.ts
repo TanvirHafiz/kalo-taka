@@ -43,11 +43,13 @@ export interface Plot {
   job: Job | null;
 }
 
-export type BagKind = 'bhara' | 'tip' | 'commission';
+export type BagKind = 'bhara' | 'chanda' | 'commission';
 
 export interface GameState {
   version: number;
   seed: number;
+  /** Epoch ms when this game began (for the day and month counter). Survives prestige. */
+  startedAt: number;
   taka: number;
   lifetimeEarnings: number;
   plots: Plot[];
@@ -107,6 +109,7 @@ export type Action =
   | { type: 'grab'; plot: number }
   | { type: 'inquiry'; option: 'talkShow' | 'donation' | 'envelope' }
   | { type: 'poster' }
+  | { type: 'payJournalists' }
   | { type: 'hire'; id: NephewId }
   | { type: 'trainNephew'; id: NephewId }
   | { type: 'fire'; id: NephewId }

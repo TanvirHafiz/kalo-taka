@@ -3,7 +3,7 @@ import type { Category } from '../config/buildings';
 import type { ErrorKey } from '../config/strings';
 import type { Action, ActionResult, Building, GameState, Plot, UpgradeCount } from '../state/types';
 import {
-  addHeat, completeJob, endInquiry, inquiryCost, isFrozen, newJob, nephewHireCost, nephewTrainCost, nephewUnlocked,
+  addHeat, completeJob, endInquiry, inquiryCost, journalistCost, isFrozen, newJob, nephewHireCost, nephewTrainCost, nephewUnlocked,
   permitSeconds, posterCost, rollLeak, speedMoneyCost, waterPumpCost,
 } from './corruption';
 import { buildCost, plotCost, plotIncome, upgradeCost } from './economy';
@@ -184,6 +184,12 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       if (state.taka < cost) return { state, error: 'notEnoughTaka' };
       const live = state.posters.filter((t) => t > now);
       return { state: { ...pay(state, cost), posters: [...live, now + CORRUPTION.posterLength * 1000] } };
+    }
+    case 'payJournalists': {
+      const cost = journalistCost(state);
+      if (state.taka < cost) return { state, error: 'notEnoughTaka' };
+      const s = pay(state, cost);
+      return { state: { ...s, heat: { ...s.heat, media: Math.max(0, s.heat.media - CORRUPTION.journalistMedia) } } };
     }
     case 'hire': {
       const n = state.nephews[action.id];

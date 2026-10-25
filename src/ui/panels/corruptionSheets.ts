@@ -1,7 +1,7 @@
 // Posters and Nephews sheets.
 import { CORRUPTION, NEPHEWS, NEPHEW_MAX_LEVEL } from '../../config/balance';
 import { STRINGS, fmt } from '../../config/strings';
-import { NEPHEW_IDS, activeCampaigns, nephewEffect, nephewHireCost, nephewSkim, nephewTrainCost, nephewUnlocked, posterCost, totalSkim } from '../../sim/corruption';
+import { NEPHEW_IDS, activeCampaigns, journalistCost, nephewEffect, nephewHireCost, nephewSkim, nephewTrainCost, nephewUnlocked, posterCost, totalSkim } from '../../sim/corruption';
 import type { GameState } from '../../state/types';
 import type { SheetRow, SheetView } from './sheet';
 
@@ -22,6 +22,12 @@ export function postersView(state: GameState): SheetView {
         title: STRINGS.posters.buy,
         lines: freshest ? [fmt(STRINGS.posters.fades, { mins: Math.ceil((freshest - now) / 60000) })] : [`${CORRUPTION.posterLength / 60} min, +${CORRUPTION.posterInfluence} ${STRINGS.hud.influence}`],
         buttons: [{ id: 'poster', label: STRINGS.posters.buy, cost, error: state.taka < cost ? 'notEnoughTaka' : null, action: { type: 'poster' } }],
+      },
+      {
+        id: 'journalists',
+        title: STRINGS.posters.journalists,
+        lines: [`${STRINGS.hud.media}: ${Math.round(state.heat.media)}`, fmt(STRINGS.posters.journalistsNote, { n: CORRUPTION.journalistMedia })],
+        buttons: [{ id: 'pay-journalists', label: STRINGS.posters.journalists, cost: journalistCost(state), error: state.taka < journalistCost(state) ? 'notEnoughTaka' : state.heat.media <= 0 ? 'alreadyDone' : null, action: { type: 'payJournalists' } }],
       },
     ],
   };

@@ -1,4 +1,4 @@
-import { BALANCE } from '../config/balance';
+import { BALANCE, MONEY_SCALE } from '../config/balance';
 import { BUILDINGS, CATEGORIES, UNLOCK_HOUSING_TIER, type Category } from '../config/buildings';
 import { SAVE_VERSION, noNephews } from './initialState';
 import type { GameState } from './types';
@@ -59,6 +59,19 @@ const MIGRATIONS: Record<number, (data: Raw) => Raw> = {
       events: [],
     };
   },
+  // v3 -> v4: all money x100 (MONEY_SCALE), the "tip" bag is now "chanda", and a start time
+  // for the day counter (old saves start counting from their last save).
+  3: (d) => {
+    const scale = (v: unknown) => (typeof v === 'number' ? v * MONEY_SCALE : v);
+    const bag = d.bag as Raw | null;
+    return {
+      ...d,
+      taka: scale(d.taka),
+      lifetimeEarnings: scale(d.lifetimeEarnings),
+      bag: bag && bag.kind === 'tip' ? { ...bag, kind: 'chanda' } : bag,
+      startedAt: typeof d.lastSimTime === 'number' ? d.lastSimTime : 0,
+    };
+  },
 };
 
 const finite = (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v);
@@ -96,6 +109,7 @@ function isGameState(x: unknown): x is GameState {
   return (
     typeof s.version === 'number' &&
     typeof s.seed === 'number' &&
+    finite(s.startedAt) &&
     typeof s.taka === 'number' &&
     Number.isFinite(s.taka) &&
     typeof s.lifetimeEarnings === 'number' &&
@@ -116,7 +130,7 @@ function isGameState(x: unknown): x is GameState {
     typeof s.milestones === 'object' && s.milestones !== null &&
     (s.inquiry === null || (typeof s.inquiry === 'object' && Number.isInteger((s.inquiry as Raw).plot) && finite((s.inquiry as Raw).until))) &&
     typeof s.bachelorsAllowed === 'boolean' && finite(s.speedPaid) && Array.isArray(s.events) &&
-    (s.bag === null || (typeof s.bag === 'object' && Number.isInteger((s.bag as Raw).plot) && ['bhara', 'tip', 'commission'].includes((s.bag as Raw).kind as string)))
+    (s.bag === null || (typeof s.bag === 'object' && Number.isInteger((s.bag as Raw).plot) && ['bhara', 'chanda', 'commission'].includes((s.bag as Raw).kind as string)))
   );
 }
 

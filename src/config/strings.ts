@@ -19,6 +19,12 @@ export const STRINGS = {
     influence: 'Influence',
     stars: 'Offshore Stars',
     boost: '3x income',
+    calendar: 'Month {m}, Day {d}',
+    mediaHelp: 'Media Heat: food, shops and hospitals lose customers. Above 60 the committee starts watching.',
+    angerHelp: 'Tenant Anger: housing loses tenants.',
+    committeeHelp: 'Committee Attention: at 100, an inquiry freezes a building.',
+    influenceHelp: 'Influence: cheaper speed money and bribes, less heat.',
+    starsHelp: 'Offshore Stars: +10% income each, forever.',
   },
 
   buttons: {
@@ -58,7 +64,8 @@ export const STRINGS = {
     upgrade: 'Upgrade',
     merge: 'Merge with #{n}',
     mergeHint: 'Needs a maxed neighbour of the same type',
-    tierLevel: 'Tier {tier}, Level {level}',
+    tierLevel: 'Tier {tier}/{maxTier}, Level {level}/{max}',
+    mediaLine: 'Media Heat is costing {pct} of customers',
     maxLevel: 'Level {max} (maxed)',
     incomeLine: 'Earns {rate}',
     bonusLine: 'Neighbours: {bonus}',
@@ -119,6 +126,8 @@ export const STRINGS = {
     title: 'Posters',
     intro: 'Your face on every wall, rickshaw and lamp post. Influence +10 while it lasts.',
     buy: 'New poster campaign',
+    journalists: 'Pay off journalists',
+    journalistsNote: '-{n} Media Heat. Stories become "positive coverage".',
     slogan: 'SHOBAR BHAI',
     active: '{n} campaign(s) running',
     fades: 'Freshest fades in {mins} min',
@@ -163,7 +172,7 @@ export const STRINGS = {
 
   bags: {
     bhara: 'bhara',
-    tip: 'tip',
+    chanda: 'chanda',
     commission: 'commission',
     collected: '{kind} collected: {amount}',
   },
@@ -232,6 +241,7 @@ export const STRINGS = {
     inquiryOver: 'Inquiry closed. Nothing was found. As usual.',
     leaked: 'The envelope leaked to the press. Media Heat up.',
     poster: 'Posters up. Your face is now on 400 walls.',
+    journalists: 'Journalists paid. Tomorrow: "Tycoon very handsome".',
     hired: '{name} joins the company. Salary: a cut of everything.',
     fired: 'Your Khala is upset. Tenant Anger up.',
     speedPaid: 'Stamped. The officer says hello.',
@@ -475,7 +485,7 @@ export const FLEE = {
   },
   perks: [
     'Jamai starts with 3 plots instead of 1',
-    'Start with ৳10 lakh',
+    'Start with ৳10 crore',
     'Food and healthcare unlock one housing tier earlier',
     'Inquiries last 3 minutes instead of 5',
     'Start each run with a free Rod-Wala Dotola',

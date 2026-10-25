@@ -119,6 +119,7 @@ function dispatch(action: Action): void {
     const pond = plotById(state, action.plot)?.job?.pond ?? 0;
     showToast(fmt(STRINGS.toasts.grabbed, { pond: STRINGS.grab.ponds[pond] ?? '' }));
   } else if (action.type === 'poster') showToast(STRINGS.toasts.poster);
+  else if (action.type === 'payJournalists') showToast(STRINGS.toasts.journalists);
   else if (action.type === 'hire') showToast(fmt(STRINGS.toasts.hired, { name: STRINGS.nephews.names[action.id] }));
   else if (action.type === 'fire') showToast(STRINGS.toasts.fired);
   drainEvents();

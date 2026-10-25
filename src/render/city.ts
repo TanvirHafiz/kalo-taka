@@ -160,9 +160,9 @@ function drawGate(ctx: Ctx, x: number, name: string): void {
 
 function levelBadge(ctx: Ctx, cx: number, level: number): void {
   const max = level >= BALANCE.maxLevel;
-  const text = max ? 'MAX' : `Lv ${level}`;
-  roundBox(ctx, cx - 17, FOOTPATH_H * 0.5 - 7, 34, 14, 7, max ? GOLD : '#fbf7ee');
-  fitText(ctx, text, cx, FOOTPATH_H * 0.5, 30, 10, INK);
+  const text = max ? `MAX ${level}/${BALANCE.maxLevel}` : `Lv ${level}/${BALANCE.maxLevel}`;
+  roundBox(ctx, cx - 22, FOOTPATH_H * 0.5 - 7, 44, 14, 7, max ? GOLD : '#fbf7ee');
+  fitText(ctx, text, cx, FOOTPATH_H * 0.5, 40, 10, INK);
 }
 
 /** Small paper chip above a building (neighbour bonus, patients). */
