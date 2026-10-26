@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Kalo Taka cover</title>
+<style>
+  @font-face { font-family: 'Baloo 2'; font-weight: 700; src: url('baloo-2-latin-700-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Baloo 2'; font-weight: 800; src: url('baloo-2-latin-800-normal.woff2') format('woff2'); }
+  html, body { margin: 0; width: 630px; height: 500px; overflow: hidden; background: #f3e9d2; }
+  .cover { position: relative; width: 630px; height: 500px; overflow: hidden; font-family: 'Baloo 2', sans-serif; color: #3a2e25; }
+  /* the street, the game's own capture, along the bottom */
+  .street { position: absolute; left: 0; bottom: 34px; width: 630px; height: 289px; background: url('street.jpg') center / cover no-repeat; }
+  /* the title as a paper card pinned over the sky */
+  .card { position: absolute; left: 26px; top: 24px; padding: 14px 24px 10px; background: #fbf6ea; border-radius: 18px;
+    box-shadow: 0 5px 0 rgba(70, 42, 16, 0.22), 0 10px 20px rgba(70, 42, 16, 0.18); transform: rotate(-1.5deg); }
+  .name { margin: 0; font-weight: 800; font-size: 82px; line-height: 0.92; letter-spacing: -0.02em; }
+  .ltd { margin: 2px 0 0 4px; font-weight: 700; font-size: 30px; line-height: 1.1; }
+  .stamp { position: absolute; right: 30px; top: 120px; font-weight: 800; font-size: 22px; line-height: 1; letter-spacing: 0.04em; color: #c8553d;
+    border: 4px solid #c8553d; border-radius: 9px; padding: 9px 14px 4px; transform: rotate(8deg); background: rgba(251, 246, 234, 0.82); }
+  /* the game's BREAKING ticker */
+  .ticker { position: absolute; left: 0; right: 0; bottom: 0; height: 34px; background: #c8553d; display: flex; align-items: center; }
+  .tag { height: 100%; display: flex; align-items: center; padding: 3px 12px 0; background: #e9c46a; font-weight: 800; font-size: 15px; letter-spacing: 0.05em; }
+  .head { padding: 3px 12px 0; color: #fffaf0; font-weight: 700; font-size: 16px; white-space: nowrap; }
+</style>
+</head>
+<body>
+  <div class="cover">
+    <div class="street"></div>
+    <div class="card">
+      <p class="name">Kalo Taka</p>
+      <p class="ltd">Private Limited</p>
+    </div>
+    <div class="stamp">PAPERWORK OPTIONAL</div>
+    <div class="ticker"><span class="tag">BREAKING</span><span class="head">Tycoon posters now outnumber trees in Mirpara</span></div>
+  </div>
+</body>
+</html>

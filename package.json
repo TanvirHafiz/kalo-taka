@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "balance": "vitest run --config vitest.balance.config.ts"
+    "balance": "vitest run --config vitest.balance.config.ts",
+    "build:itch": "tsc --noEmit && vite build --base ./ --outDir dist-itch --emptyOutDir && node scripts/zip-itch.mjs"
   },
   "devDependencies": {
     "typescript": "^7.0.2",
