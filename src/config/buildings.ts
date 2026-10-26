@@ -13,6 +13,8 @@ export interface TierDef {
 
 import { MONEY_SCALE } from './balance';
 import type { EventId } from './events';
+import { LANG } from './lang';
+import { DISTRICT_NAMES_BN, TIER_NAMES_BN } from './strings.bn';
 
 const LAKH = 100_000;
 const CRORE = 10_000_000;
@@ -56,7 +58,12 @@ const SPEC_LADDERS: Record<Category, TierDef[]> = {
 export const BUILDINGS: Record<Category, TierDef[]> = Object.fromEntries(
   Object.entries(SPEC_LADDERS).map(([cat, tiers]) => [
     cat,
-    tiers.map((t) => ({ ...t, baseIncome: t.baseIncome * MONEY_SCALE, baseCost: t.baseCost * MONEY_SCALE })),
+    tiers.map((t, i) => ({
+      ...t,
+      name: LANG === 'bn' ? (TIER_NAMES_BN[cat as Category][i] ?? t.name) : t.name,
+      baseIncome: t.baseIncome * MONEY_SCALE,
+      baseCost: t.baseCost * MONEY_SCALE,
+    })),
   ]),
 ) as Record<Category, TierDef[]>;
 
@@ -96,7 +103,7 @@ export interface DistrictDef {
 }
 
 /** Districts unlock in order as income grows. */
-export const DISTRICTS: readonly DistrictDef[] = [
+const DISTRICTS_EN: readonly DistrictDef[] = [
   { name: 'Mirpara', unlockIncome: 0, eventOdds: { loadShedding: 1.5 } },
   // the lake breeds mosquitoes
   { name: 'Dhanpur', unlockIncome: 5_000 * MONEY_SCALE, eventOdds: { dengue: 1.5, monsoon: 1.25 } },
@@ -107,3 +114,4 @@ export const DISTRICTS: readonly DistrictDef[] = [
   // a river island floods first and asks questions later
   { name: 'Notun Char', unlockIncome: 50 * CRORE * MONEY_SCALE, eventOdds: { monsoon: 2.5, journalist: 1.5 } },
 ];
+export const DISTRICTS: readonly DistrictDef[] = DISTRICTS_EN.map((d, k) => (LANG === 'bn' ? { ...d, name: DISTRICT_NAMES_BN[k] ?? d.name } : d));

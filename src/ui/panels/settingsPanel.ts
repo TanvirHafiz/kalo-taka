@@ -1,5 +1,6 @@
 // The Settings sheet: volumes, motion, number format, ticker speed, and save tools (export,
 // import, a two-step hard reset). Settings live apart from the save (util/settings.ts).
+import { LANG, localDigits, setLang, type Lang } from '../../config/lang';
 import { STRINGS } from '../../config/strings';
 import { exportSave, importSave } from '../../state/save';
 import type { GameState } from '../../state/types';
@@ -19,6 +20,8 @@ export interface SettingsHooks {
   toast(msg: string): void;
   /** Close the other panels before this one opens. */
   onOpen(): void;
+  /** Save the game before the page reloads into another language. */
+  beforeLangChange(): void;
 }
 
 const RESET_CONFIRM_MS = 4000;
@@ -44,6 +47,7 @@ export function createSettingsPanel(root: HTMLElement, hooks: SettingsHooks): Se
       ${choice('motion', S.motion, [['system', S.motionSystem], ['reduce', S.motionReduce], ['full', S.motionFull]])}
       ${choice('numbers', S.numbers, [['bd', S.numbersBd], ['short', S.numbersShort]])}
       ${choice('ticker', S.ticker, [['0.6', S.tickerSlow], ['1', S.tickerNormal], ['1.5', S.tickerFast]])}
+      <label class="set-row"><span>${STRINGS.lang.label}</span><select data-lang><option value="en">${STRINGS.lang.en}</option><option value="bn">${STRINGS.lang.bn}</option></select></label>
       <h3>${S.save}</h3>
       <div class="set-actions">
         <button type="button" data-act="export">${S.export}</button>
@@ -68,18 +72,23 @@ export function createSettingsPanel(root: HTMLElement, hooks: SettingsHooks): Se
     for (const input of el.querySelectorAll<HTMLInputElement>('input[type="range"]')) {
       const v = s[input.dataset.key as 'master'];
       input.value = String(Math.round(v * 100));
-      input.nextElementSibling!.textContent = `${Math.round(v * 100)}`;
+      input.nextElementSibling!.textContent = localDigits(`${Math.round(v * 100)}`);
     }
-    for (const sel of el.querySelectorAll<HTMLSelectElement>('select')) sel.value = String(s[sel.dataset.key as keyof Settings]);
+    for (const sel of el.querySelectorAll<HTMLSelectElement>('select[data-key]')) sel.value = String(s[sel.dataset.key as keyof Settings]);
+    el.querySelector<HTMLSelectElement>('select[data-lang]')!.value = LANG;
   };
 
   el.addEventListener('input', (e) => {
     const t = e.target as HTMLInputElement | HTMLSelectElement;
+    if (t.dataset.lang !== undefined && t.value !== LANG) {
+      hooks.beforeLangChange();
+      return setLang(t.value as Lang);
+    }
     const key = t.dataset.key as keyof Settings | undefined;
     if (!key) return;
     if (t instanceof HTMLInputElement) {
       updateSettings({ [key]: Number(t.value) / 100 } as Partial<Settings>);
-      t.nextElementSibling!.textContent = t.value;
+      t.nextElementSibling!.textContent = localDigits(t.value);
     } else if (key === 'motion') updateSettings({ motion: t.value as MotionSetting });
     else if (key === 'numbers') updateSettings({ numbers: t.value as NumberFormat });
     else if (key === 'ticker') updateSettings({ ticker: Number(t.value) });

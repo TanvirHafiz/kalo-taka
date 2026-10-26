@@ -1,4 +1,5 @@
 // Money is a plain JS number of Taka. This module only formats it.
+import { LANG, localDigits } from '../config/lang';
 
 export const LAKH = 1e5;
 export const CRORE = 1e7;
@@ -8,6 +9,11 @@ export const CRORE_CRORE = 1e14;
 export const SUFFIX_START = 1e17;
 
 const TAKA = '৳';
+
+/** Unit words for the lakh/crore format, per language. */
+const UNITS = LANG === 'bn'
+  ? { lakh: 'লাখ', crore: 'কোটি', lakhCrore: 'লাখ কোটি', crCr: 'কোটি কোটি', lot: 'অনেক', perSec: '/সে' }
+  : { lakh: 'lakh', crore: 'crore', lakhCrore: 'lakh crore', crCr: 'CrCr', lot: 'a lot', perSec: '/s' };
 
 /** Truncate (never round up) to `dp` decimals, so 99.999 lakh never shows as 100.00 lakh. */
 function truncFixed(x: number, dp: number): string {
@@ -59,21 +65,25 @@ function formatShort(n: number): string {
   return `${sign}${truncFixed(v / div, 2)}${u}`;
 }
 
-/** Format an amount without the currency sign. */
+/** Format an amount without the currency sign (Bengali digits when playing in Bangla). */
 export function formatAmount(n: number): string {
+  return localDigits(formatAmountAscii(n));
+}
+
+function formatAmountAscii(n: number): string {
   if (mode === 'short' && Number.isFinite(n)) return formatShort(n);
-  if (!Number.isFinite(n)) return n > 0 ? 'a lot' : '0';
+  if (!Number.isFinite(n)) return n > 0 ? UNITS.lot : '0';
   const sign = n < 0 ? '-' : '';
   const v = Math.abs(n);
 
   if (v < LAKH) return sign + groupIndian(v);
-  if (v < CRORE) return `${sign}${truncFixed(v / LAKH, 2)} lakh`;
+  if (v < CRORE) return `${sign}${truncFixed(v / LAKH, 2)} ${UNITS.lakh}`;
   if (v < LAKH_CRORE) {
     const c = v / CRORE;
-    return c < 1000 ? `${sign}${truncFixed(c, 2)} crore` : `${sign}${groupIndian(c)} crore`;
+    return c < 1000 ? `${sign}${truncFixed(c, 2)} ${UNITS.crore}` : `${sign}${groupIndian(c)} ${UNITS.crore}`;
   }
-  if (v < CRORE_CRORE) return `${sign}${truncFixed(v / LAKH_CRORE, 2)} lakh crore`;
-  if (v < SUFFIX_START) return `${sign}${truncFixed(v / CRORE_CRORE, 1)} CrCr`;
+  if (v < CRORE_CRORE) return `${sign}${truncFixed(v / LAKH_CRORE, 2)} ${UNITS.lakhCrore}`;
+  if (v < SUFFIX_START) return `${sign}${truncFixed(v / CRORE_CRORE, 1)} ${UNITS.crCr}`;
 
   const k = Math.floor(Math.log10(v / SUFFIX_START) / 3 + 1e-9);
   const scaled = v / (SUFFIX_START * 1000 ** k);
@@ -89,7 +99,7 @@ export function formatTaka(n: number): string {
 /** Income rate. Small rates keep one decimal so early growth is visible. */
 export function formatRate(perSec: number): string {
   if (Math.abs(perSec) < 100 && perSec !== Math.floor(perSec)) {
-    return `${TAKA}${truncFixed(perSec, 1)}/s`;
+    return `${TAKA}${localDigits(truncFixed(perSec, 1))}${UNITS.perSec}`;
   }
-  return `${formatTaka(perSec)}/s`;
+  return `${formatTaka(perSec)}${UNITS.perSec}`;
 }

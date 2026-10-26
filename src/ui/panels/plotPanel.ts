@@ -158,7 +158,7 @@ function viewFor(state: GameState, id: number, count: UpgradeCount): View {
     const o = plotById(state, other)!;
     buttons.push({ id: `merge-${other}`, label: fmt(STRINGS.plot.merge, { n: o.slot + 1 }), cost: mergeFee(b), error: canMerge(state, id, other), action: { type: 'merge', a: id, b: other } });
   }
-  if (!partners.length) lines.push(b.level >= BALANCE.maxLevel ? `${STRINGS.plot.mergeHint}. ${STRINGS.plot.evictHint}` : STRINGS.plot.mergeHint);
+  if (!partners.length) lines.push(b.level >= BALANCE.maxLevel ? fmt(STRINGS.plot.boxedIn, { hint: STRINGS.plot.mergeHint, evict: STRINGS.plot.evictHint }) : STRINGS.plot.mergeHint);
   buttons.push({
     id: 'relocate',
     label: STRINGS.plot.relocate,
@@ -195,7 +195,7 @@ export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void
   el.innerHTML = `
     <div class="panel-head"><div><h2 class="panel-title"></h2><div class="panel-sub"></div></div><button class="panel-close" type="button" aria-label="${STRINGS.plot.close}">×</button></div>
     <div class="panel-lines"></div>
-    <div class="buy-toggle" role="radiogroup" aria-label="Upgrade amount">
+    <div class="buy-toggle" role="radiogroup" aria-label="${STRINGS.plot.upgradeAmount}">
       ${COUNTS.map((c) => `<button type="button" role="radio" data-count="${c.key}">${c.label}</button>`).join('')}
     </div>
     <div class="panel-buttons"></div>

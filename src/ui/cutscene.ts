@@ -53,7 +53,7 @@ export function playCutscene(root: HTMLElement, seed: number, stars: number, onD
       poly(c, [px - 90, gy - 120, px + 60, gy - 130, px + 80, gy - 118, px - 80, gy - 104], '#f5efe2');
       poly(c, [px - 20, gy - 124, px + 10, gy - 160, px + 24, gy - 160, px + 10, gy - 122], '#c8553d');
       box(c, w * 0.08, gy - 150, 120, 150, '#a8c5da');
-      fitText(c, 'DEPARTURES', w * 0.08 + 60, gy - 132, 108, 14, '#3a2e25');
+      fitText(c, FLEE.departures, w * 0.08 + 60, gy - 132, 108, 14, '#3a2e25');
       const tx = w * (0.3 + 0.12 * k);
       c.drawImage(face, tx - 24, gy - 120, 48, 48);
       box(c, tx - 16, gy - 74, 32, 40, '#3a3f58');

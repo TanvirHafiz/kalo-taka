@@ -1,9 +1,12 @@
 import { BALANCE } from './balance';
+import { LANG, localDigits } from './lang';
+import { BUBBLES_BN, EVENT_TEXT_BN, FLEE_BN, M5_TEXT_BN, MAMUN_BN, NAME_WORDS_BN, STRINGS_BN, TICKER_BN } from './strings.bn';
 
-// Every player-facing string lives here so a Bangla translation can be added later.
+// Every player-facing string lives here, in English; strings.bn.ts has the same tables in Bangla and
+// the exports at the bottom pick the language chosen at startup (config/lang.ts).
 // Rule: no em dashes in in-game text.
 
-export const STRINGS = {
+export const STRINGS_EN = {
   title: 'Kalo Taka Private Limited',
   disclaimer: 'Any resemblance to any real bhai is purely coincidental.',
   start: 'Start',
@@ -25,6 +28,7 @@ export const STRINGS = {
     committeeHelp: 'Committee Attention: at 100, an inquiry freezes a building.',
     influenceHelp: 'Influence: cheaper speed money and bribes, less heat.',
     starsHelp: 'Offshore Stars: +10% income each, forever.',
+    portrait: 'Your portrait',
   },
 
   buttons: {
@@ -34,6 +38,12 @@ export const STRINGS = {
     flee: 'Flee',
     settings: 'Settings',
     later: '{name} opens in a later update.',
+  },
+
+  lang: {
+    label: 'Language',
+    en: 'English',
+    bn: 'বাংলা',
   },
 
   settings: {
@@ -103,6 +113,7 @@ export const STRINGS = {
     evictNote: 'Throw them out, bulldoze, rebuild. Get back {refund}.',
     evictConfirm: 'Tap again to send the bulldozer',
     evictHint: 'Boxed in? An eviction drive frees the plot.',
+    boxedIn: '{hint}. {evict}',
     relocate: 'Relocation permit',
     relocateNote: 'Move it to another plot you own, or swap it with another building.',
     relocateBanner: 'Moving {name}: tap a plot you own, or another of your buildings to swap.',
@@ -119,6 +130,9 @@ export const STRINGS = {
     buyMax: 'Max',
     upgradeN: 'Upgrade x{n}',
     close: 'Close',
+    upgradeAmount: 'Upgrade amount',
+    badge: 'Lv {n}/{max}',
+    badgeMax: 'MAX {n}/{max}',
   },
 
   permit: {
@@ -312,10 +326,10 @@ export const STRINGS = {
   },
 } as const;
 
-export type ErrorKey = keyof typeof STRINGS.errors;
+export type ErrorKey = keyof typeof STRINGS_EN.errors;
 
 /** Signboard name word lists: first word + second word. All invented. */
-export const NAME_WORDS = {
+export const NAME_WORDS_EN = {
   housing: {
     first: ['Shanti', 'Rahman', 'Ma', 'Bhai Bhai', 'Golden', 'Royal', 'Nur', 'Moyna', 'Dulal', 'Kobutor', 'Shapla', 'Bismillah'],
     second: ['Nibash', 'Villa', 'Tower', 'Bhaban', 'Heights', 'Kutir', 'Mansion', 'Palace', 'Garden'],
@@ -345,9 +359,9 @@ export const NAME_BLOCKLIST: readonly string[] = [
   'new market', 'twin tower', 'jomuna city', 'jomuna plaza',
 ];
 
-/** Fill {slots} in a template. */
+/** Fill {slots} in a template (in Bangla, numbers come out in Bengali digits). */
 export function fmt(template: string, vars: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? `{${k}}`));
+  return localDigits(template.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? `{${k}}`)));
 }
 
 /** Error text with shared slots filled in. */
@@ -361,7 +375,7 @@ export function errorText(key: ErrorKey): string {
 // parties, brands or religious mockery; Ramadan content stays warm.
 
 /** News ticker. Slots: {building} {district} {amount} {nephew}. */
-export const TICKER = {
+export const TICKER_EN = {
   built: [
     'Local tycoon opens {building}, says it is "for the people"',
     '{building} opens in {district}; ribbon cut, rules also cut',
@@ -462,7 +476,7 @@ export const TICKER = {
 };
 
 /** Manager Mamun: tutorial, offline report, events and idle chatter. */
-export const MAMUN = {
+export const MAMUN_EN = {
   name: 'Manager Mamun',
   tutorial: [
     'Sir, first plot is free. Build a Tin-Shed Ghor, let us start.',
@@ -511,7 +525,7 @@ export const MAMUN = {
 };
 
 /** Event names and response buttons. */
-export const EVENT_TEXT = {
+export const EVENT_TEXT_EN = {
   names: {
     loadShedding: 'Load-shedding', monsoon: 'Monsoon waterlogging', hartal: 'Hartal day', dengue: 'Dengue season',
     rentHike: 'January rent hike', gas: 'Gas line problem', vip: 'VIP visit', journalist: 'Journalist sniffing',
@@ -540,7 +554,7 @@ export const EVENT_TEXT = {
 };
 
 /** Prestige: Flee to Canada. */
-export const FLEE = {
+export const FLEE_EN = {
   button: 'Flee',
   title: 'Flee to Canada',
   intro: 'Sell everything, escape abroad, and let the Jamai restart the business.',
@@ -570,12 +584,13 @@ export const FLEE = {
     'Condition stable. Assets also stable.',
     'Meanwhile, the Jamai arrives with a hard hat.',
   ],
+  departures: 'DEPARTURES',
   skip: 'Skip',
   toast: 'Welcome back, Jamai. Grandfather left you {n} stars and a cousin.',
 };
 
 /** Speech bubbles: 30 per building type. Tenants, patients and customers are never the joke. */
-export const BUBBLES = {
+export const BUBBLES_EN = {
   housing: [
     'Bhaiya, water nai 3 din', 'Rent again increased?!', 'Lift is decoration only', 'Who parked on my clothesline?',
     'Gas is gone again', 'Landlord bhai, the roof leaks', 'Generator only for landlord?', 'My cat loves this balcony',
@@ -634,7 +649,21 @@ export const BUBBLES = {
 };
 
 /** Tutorial overlay and misc M5 UI text. */
-export const M5_TEXT = {
+export const M5_TEXT_EN = {
   ticker: 'BREAKING',
   fleeReady: 'Flee: +{n} stars',
 };
+
+/** String literal types widened to string, so the Bangla tables can share the English shapes. */
+export type Widen<T> = T extends string ? string : { readonly [K in keyof T]: Widen<T[K]> };
+
+const bn = LANG === 'bn';
+// The tables the game uses: English or Bangla, fixed for this page load.
+export const STRINGS: Widen<typeof STRINGS_EN> = bn ? STRINGS_BN : STRINGS_EN;
+export const NAME_WORDS: Widen<typeof NAME_WORDS_EN> = bn ? NAME_WORDS_BN : NAME_WORDS_EN;
+export const TICKER: Widen<typeof TICKER_EN> = bn ? TICKER_BN : TICKER_EN;
+export const MAMUN: Widen<typeof MAMUN_EN> = bn ? MAMUN_BN : MAMUN_EN;
+export const EVENT_TEXT: Widen<typeof EVENT_TEXT_EN> = bn ? EVENT_TEXT_BN : EVENT_TEXT_EN;
+export const FLEE: Widen<typeof FLEE_EN> = bn ? FLEE_BN : FLEE_EN;
+export const BUBBLES: Widen<typeof BUBBLES_EN> = bn ? BUBBLES_BN : BUBBLES_EN;
+export const M5_TEXT: Widen<typeof M5_TEXT_EN> = bn ? M5_TEXT_BN : M5_TEXT_EN;

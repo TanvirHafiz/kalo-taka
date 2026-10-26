@@ -211,6 +211,15 @@ What changed from the spec (only costs and waits; every income in the building t
 - Open the game with `?debug` at the end of the URL. A dark panel under the HUD has: time skip x1/x10/x100, +৳1 crore/+৳100 crore/+৳10,000 crore (added to Taka, not counted as earnings, so stars are unaffected), sliders for Media, Anger, Committee and Influence, start any event, finish all permits, fill every plot with maxed buildings, and a script-time-per-frame readout.
 - Time skip rewinds the save's clocks in 0.7 s pieces and lets the normal sim replay them, so events and the tutorial still run and a reload after skipping behaves normally. The day/night sky stays on the real clock.
 
+## Bangla version (added on request, 2026-10-26)
+
+- The title card has an English | বাংলা toggle above Start, and Settings has a Language row. Switching saves the game and reloads into the other language (every label, signboard and sprite is built at startup). The first visit picks Bangla if the browser language is Bangla. The choice is stored under its own key, so a hard reset keeps it.
+- Every player-facing line is translated in `src/config/strings.bn.ts`: UI, errors, toasts, Mamun, the ticker, events, Flee, all bubble pools (30 per building type), healthcare test labels, tier and district names (মিরপাড়া, ধানপুর, গুলমোহর, পূর্বপুর, নতুন চর) and the signboard word lists. Colloquial Dhaka Bangla in Bengali script, same jokes and rules (fictional, no em dashes).
+- Numbers: Bengali digits everywhere, with লাখ, কোটি and লাখ কোটি; income reads ৳৩,৫০২/সে. The short number mode also uses Bengali digits.
+- Font: Baloo Da 2 (the Bengali Baloo, self-hosted) is first in the font list in Bangla, so Bengali text keeps its own metrics; canvas text never shrinks below 7 px in Bangla, and the HUD drops letter spacing that would break the headstroke line.
+- Signboards pick their words by position from the English lists (so the real-brand blocklist still works) and show the Bangla words at the same positions.
+- `tests/lang.test.ts` checks that every Bangla string exists, keeps the same {slots}, has no em dash, and that fixed lists have the same length. Tests and the balance bot always run in English.
+
 ## Changes requested after M4 (2026-10-25)
 
 - All money is 100x (MONEY_SCALE = 100 in config/balance.ts): you start with ৳50 lakh, a Tin-Shed costs ৳2 lakh and earns ৳500/s at level 1. Every cost, income, plot price, district threshold and price floor uses the same scale, so pacing is unchanged. Income-scaled prices (speed money, bribes, posters, nephews) follow automatically. Old saves get their Taka multiplied by 100 (save v4). Traffic is measured in spec-scale Taka, so the street is no busier.

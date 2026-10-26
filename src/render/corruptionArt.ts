@@ -3,6 +3,7 @@
 import { box, circle, ellipse, fitText, line, poly, roundBox, setPaperMode, type Ctx } from './draw';
 import { INK, LEAF, LEAF_DARK, WATER, WATER_DARK } from './palette';
 import { drawAvatar } from './portrait';
+import { localDigits } from '../config/lang';
 
 /** Bamboo scaffolding with green safety net while a building waits on its permit. */
 export function drawScaffold(ctx: Ctx, cx: number, h: number): void {
@@ -33,7 +34,7 @@ export function drawPermitBar(ctx: Ctx, cx: number, y: number, p: number, secs: 
   ctx.save();
   ctx.globalAlpha = s;
   circle(ctx, cx + 38, y - 27, 7, '#c8553d');
-  fitText(ctx, `${Math.ceil(secs)}s`, cx + 38, y - 27, 12, 6, '#fffaf0');
+  fitText(ctx, localDigits(`${Math.ceil(secs)}s`), cx + 38, y - 27, 12, 6, '#fffaf0');
   ctx.restore();
 }
 
@@ -102,7 +103,7 @@ export function drawInquiry(ctx: Ctx, cx: number, h: number, secs: number, title
   // the notice
   roundBox(ctx, cx - 40, -h * 0.55 - 20, 80, 40, 3, '#fbf7ee');
   fitText(ctx, title, cx, -h * 0.55 - 10, 72, 8, '#c8553d');
-  fitText(ctx, `${Math.ceil(secs)}s`, cx, -h * 0.55 + 6, 72, 14, INK);
+  fitText(ctx, localDigits(`${Math.ceil(secs)}s`), cx, -h * 0.55 + 6, 72, 14, INK);
   circle(ctx, cx + 30, -h * 0.55 - 18, 3, '#c8553d', false);
 }
 

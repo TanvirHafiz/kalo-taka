@@ -15,7 +15,7 @@ import { getSprite, spriteLights, spriteScale, type Sprite } from './buildings/c
 import { signboard } from './buildings/common';
 import { ZOOM_MAX, ZOOM_MIN, screenToWorldX, type Camera } from './camera';
 import { skyStyle } from './districts';
-import { box, circle, ellipse, fitText, line, paperShape, poly, range, roundBox, setPaperMode, type Ctx } from './draw';
+import { FONT, box, circle, ellipse, fitText, line, paperShape, poly, range, roundBox, setPaperMode, type Ctx } from './draw';
 import { Effects, type PlotFx } from './effects';
 import { drawFill, drawGrabFlag, drawInquiry, drawPermitBar, drawPoster, drawScaffold, posterImage } from './corruptionArt';
 import { drawBarricade, drawBoat, drawBubble, drawBunting, drawCylinders, drawFlood, drawFlyoverSign, drawGenerator, drawJournalist, drawLantern, drawMosquitoes, drawParking } from './eventArt';
@@ -167,19 +167,19 @@ function plotNumber(ctx: Ctx, p: Plot): void {
   const x = plotCenter(p) - (back ? 42 * BACK_SCALE : 46);
   const y = back ? BACK_Y + 4 : FOOTPATH_H * 0.5;
   circle(ctx, x, y, 9, back ? 'rgba(58,46,37,0.55)' : 'rgba(58,46,37,0.8)', false);
-  fitText(ctx, String(p.slot + 1), x, y + 0.5, 15, 12, '#fffaf0', 800);
+  fitText(ctx, fmt('{n}', { n: p.slot + 1 }), x, y + 0.5, 15, 12, '#fffaf0', 800);
 }
 
 function levelBadge(ctx: Ctx, cx: number, level: number): void {
   const max = level >= BALANCE.maxLevel;
-  const text = max ? `MAX ${level}/${BALANCE.maxLevel}` : `Lv ${level}/${BALANCE.maxLevel}`;
+  const text = fmt(max ? STRINGS.plot.badgeMax : STRINGS.plot.badge, { n: level, max: BALANCE.maxLevel });
   roundBox(ctx, cx - 22, FOOTPATH_H * 0.5 - 7, 44, 14, 7, max ? GOLD : '#fbf7ee');
   fitText(ctx, text, cx, FOOTPATH_H * 0.5, 40, 10, INK);
 }
 
 /** Small paper chip above a building (neighbour bonus, patients). */
 function chip(ctx: Ctx, cx: number, y: number, text: string, bg: string, fg: string): void {
-  ctx.font = `800 9px "Baloo 2", sans-serif`;
+  ctx.font = `800 9px ${FONT}`;
   const w = Math.max(24, ctx.measureText(text).width + 10);
   roundBox(ctx, cx - w / 2, y - 7, w, 14, 7, bg);
   fitText(ctx, text, cx, y, w - 4, 9, fg);

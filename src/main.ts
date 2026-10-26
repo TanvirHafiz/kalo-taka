@@ -1,6 +1,9 @@
 import '@fontsource/baloo-2/latin-600.css';
 import '@fontsource/baloo-2/latin-700.css';
 import '@fontsource/baloo-2/latin-800.css';
+import '@fontsource/baloo-da-2/bengali-600.css';
+import '@fontsource/baloo-da-2/bengali-700.css';
+import '@fontsource/baloo-da-2/bengali-800.css';
 import './style.css';
 import { BALANCE } from './config/balance';
 import { EVENT_TEXT, FLEE, MAMUN, STRINGS, TICKER, errorText, fmt } from './config/strings';
@@ -36,6 +39,10 @@ import { createSheet } from './ui/panels/sheet';
 import { initToasts, showToast } from './ui/toasts';
 import { formatTaka } from './util/money';
 import { randomSeed } from './util/rng';
+import { LANG, setLang, type Lang } from './config/lang';
+
+document.documentElement.lang = LANG;
+
 import { getSettings, loadSettings, onSettings } from './util/settings';
 import { setNumberMode } from './util/money';
 import { createAudio } from './ui/audio';
@@ -270,6 +277,7 @@ const settingsPanel = createSettingsPanel(overlay, {
   },
   toast: showToast,
   onOpen: () => closeAll(),
+  beforeLangChange: () => save(),
 });
 
 /** Swap in a whole new game (import or hard reset) and save it at once, so autosave cannot undo it. */
@@ -360,7 +368,11 @@ let moved = 0;
 let pinchDist = 0;
 canvas.addEventListener('pointerdown', (e) => {
   pointers.set(e.pointerId, e.clientX);
-  canvas.setPointerCapture(e.pointerId);
+  try {
+    canvas.setPointerCapture(e.pointerId);
+  } catch {
+    // a pointer that is already gone (or a synthetic one): dragging still works without capture
+  }
   if (pointers.size === 1) {
     moved = 0;
     dragStartX = e.clientX;
@@ -529,7 +541,8 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', save);
 
 // --- Fonts: sprites are drawn with Baloo 2, so redraw once it is ready -------
-Promise.all(['600', '700', '800'].map((w) => document.fonts.load(`${w} 16px "Baloo 2"`)))
+// the Bengali file only downloads when asked for a Bengali glyph, so ask with real text
+Promise.all(['600', '700', '800'].flatMap((w) => [document.fonts.load(`${w} 16px "Baloo 2"`), document.fonts.load(`${w} 16px "Baloo Da 2"`, 'অআক্ষ৳১')]))
   .then(() => {
     clearSpriteCache();
     clearSceneCache();
@@ -604,16 +617,29 @@ function fled(stars: number): void {
 }
 
 // --- Title card --------------------------------------------------------------
+document.title = STRINGS.title;
 const splash = document.createElement('div');
 splash.className = 'splash';
-splash.innerHTML = `<div class="splash-card"><p class="splash-kicker"></p><h1></h1><p class="disclaimer"></p><button type="button" class="splash-start"></button></div>`;
+splash.innerHTML = `<div class="splash-card"><p class="splash-kicker"></p><h1></h1><p class="disclaimer"></p><div class="splash-lang" role="group" aria-label="${STRINGS.lang.label}"><button type="button" data-lang="en" lang="en">English</button><button type="button" data-lang="bn" lang="bn">বাংলা</button></div><button type="button" class="splash-start"></button></div>`;
 splash.querySelector('.splash-kicker')!.textContent = STRINGS.tagline;
 splash.querySelector('h1')!.textContent = STRINGS.title;
 splash.querySelector('.disclaimer')!.textContent = STRINGS.disclaimer;
-splash.querySelector('button')!.textContent = STRINGS.start;
-splash.querySelector('button')!.addEventListener('click', () => splash.remove());
+const startBtn = splash.querySelector<HTMLButtonElement>('.splash-start')!;
+startBtn.textContent = STRINGS.start;
+startBtn.addEventListener('click', () => splash.remove());
+// choose the language before playing: switching saves and reloads into it, title card and all
+for (const b of splash.querySelectorAll<HTMLButtonElement>('[data-lang]')) {
+  const on = b.dataset.lang === LANG;
+  b.classList.toggle('on', on);
+  b.setAttribute('aria-pressed', String(on));
+  b.addEventListener('click', () => {
+    if (b.dataset.lang === LANG) return;
+    save();
+    setLang(b.dataset.lang as Lang);
+  });
+}
 overlay.appendChild(splash);
-splash.querySelector('button')!.focus();
+startBtn.focus();
 
 hud.update(state, 0);
 drainEvents();

@@ -1,6 +1,6 @@
 // Reusable building modules. Local space: ground at y = 0, up is negative y.
 import { VISUAL } from '../../config/balance';
-import { addLight, addWindowLight, box, circle, ellipse, fitText, line, pick, poly, range, roundBox, type Ctx } from '../draw';
+import { FONT, addLight, addWindowLight, box, circle, ellipse, fitText, line, pick, poly, range, roundBox, type Ctx } from '../draw';
 import {
   BRICK, BRICK_MORTAR, CLOTHES, GLASS, GLASS_HI, GOLD, GOLD_DARK, INK, LEAF, LEAF_DARK, POT, RUST, RUST_DARK, SIGN_LIGHT, SKIN,
 } from '../palette';
@@ -287,10 +287,10 @@ export function sittingPerson(ctx: Ctx, x: number, base: number, shirt: string, 
   circle(ctx, x + (asleep ? 5 : 3), base - 22, 3.8, skin);
   if (asleep) {
     ctx.fillStyle = INK;
-    ctx.font = `800 7px "Baloo 2", sans-serif`;
+    ctx.font = `800 7px ${FONT}`;
     ctx.textAlign = 'left';
     ctx.fillText('z', x + 10, base - 26);
-    ctx.font = `800 5px "Baloo 2", sans-serif`;
+    ctx.font = `800 5px ${FONT}`;
     ctx.fillText('z', x + 14, base - 31);
   }
 }

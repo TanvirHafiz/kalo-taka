@@ -9,6 +9,7 @@ import { isBoosted, totalIncome } from '../sim/economy';
 import type { GameState } from '../state/types';
 import { formatRate, formatTaka } from '../util/money';
 import { drawAvatar } from '../render/portrait';
+import { localDigits } from '../config/lang';
 
 export interface Hud {
   update(state: GameState, district: number): void;
@@ -37,7 +38,7 @@ export function createHud(root: HTMLElement): Hud {
   el.className = 'hud';
   el.innerHTML = `
     <div class="hud-main">
-      <canvas class="hud-avatar" width="88" height="88" aria-label="Your portrait"></canvas>
+      <canvas class="hud-avatar" width="88" height="88" aria-label="${STRINGS.hud.portrait}"></canvas>
       <div class="hud-item hud-taka"><span class="hud-label">${STRINGS.hud.taka}</span><span class="hud-value" data-k="taka"></span></div>
       <div class="hud-item"><span class="hud-label">${STRINGS.hud.income}</span><span class="hud-value" data-k="income"></span></div>
       <div class="hud-district" data-k="district"></div>
@@ -69,7 +70,7 @@ export function createHud(root: HTMLElement): Hud {
     const g = el.querySelector<HTMLElement>(`[data-g="${key}"]`)!;
     const bar = g.querySelector<HTMLElement>('.gauge-bar i');
     if (bar) bar.style.width = `${Math.max(0, Math.min(100, value))}%`;
-    g.querySelector('.gauge-val')!.textContent = String(Math.round(value));
+    g.querySelector('.gauge-val')!.textContent = localDigits(String(Math.round(value)));
     g.classList.toggle('hot', value >= 60);
   };
 

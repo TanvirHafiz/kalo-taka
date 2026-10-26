@@ -1,6 +1,6 @@
 // Paper art for random events: floods and boats, generators, the bus parking lot, the cylinder
 // shop, VIP barricades, the journalist, election bunting, iftar lanterns, mosquitoes, the flyover.
-import { box, circle, ellipse, fitText, line, poly, roundBox, type Ctx } from './draw';
+import { FONT, box, circle, ellipse, fitText, line, poly, roundBox, type Ctx } from './draw';
 import { INK } from './palette';
 
 /** Knee-deep water over the footpath and the plots' ground floors. */
@@ -120,7 +120,7 @@ export function drawFlyoverSign(ctx: Ctx, x: number, label: string): void {
 export function drawBubble(ctx: Ctx, x: number, y: number, text: string, alpha: number): void {
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.font = `700 9px "Baloo 2", sans-serif`;
+  ctx.font = `700 9px ${FONT}`;
   const w = Math.min(150, ctx.measureText(text).width + 14);
   roundBox(ctx, x - w / 2, y - 24, w, 18, 8, '#fffdf7');
   poly(ctx, [x - 4, y - 7, x + 4, y - 7, x, y], '#fffdf7', false);

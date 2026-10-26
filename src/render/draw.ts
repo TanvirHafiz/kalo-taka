@@ -2,10 +2,16 @@
 // pieces: slightly uneven edges and a soft drop shadow, with no outline. Edge jitter comes from a
 // hash of quantised coordinates, so a shape looks identical every time it is drawn.
 import { INK, PAPER_SHADOW } from './palette';
+import { LANG } from '../config/lang';
 
 export type Ctx = CanvasRenderingContext2D;
 
-export const FONT = '"Baloo 2", "Trebuchet MS", system-ui, sans-serif';
+/** Smallest size fitText shrinks to: Bengali vowel signs need more pixels than Latin letters. */
+const MIN_TEXT_PX = LANG === 'bn' ? 7 : 5;
+
+export const FONT = LANG === 'bn'
+  ? '"Baloo Da 2", "Baloo 2", "Trebuchet MS", system-ui, sans-serif'
+  : '"Baloo 2", "Baloo Da 2", "Trebuchet MS", system-ui, sans-serif';
 
 /** Edge jitter in world units. */
 const WOBBLE = 0.4;
@@ -226,7 +232,7 @@ export function line(ctx: Ctx, x1: number, y1: number, x2: number, y2: number, c
 export function fitText(ctx: Ctx, text: string, cx: number, cy: number, maxW: number, size: number, color: string, weight = 800): void {
   let s = size;
   ctx.font = `${weight} ${s}px ${FONT}`;
-  while (s > 5 && ctx.measureText(text).width > maxW) {
+  while (s > MIN_TEXT_PX && ctx.measureText(text).width > maxW) {
     s -= 0.5;
     ctx.font = `${weight} ${s}px ${FONT}`;
   }

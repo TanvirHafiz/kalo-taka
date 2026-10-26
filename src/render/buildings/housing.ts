@@ -6,7 +6,7 @@ import type { Building } from '../../state/types';
 import { buildingName } from '../../util/names';
 import { hashSeed, mulberry32 } from '../../util/rng';
 import { VISUAL } from '../../config/balance';
-import { addLight, addWindowLight, box, circle, ellipse, fitText, line, paperShape, pick, poly, range, roundBox, type Ctx } from '../draw';
+import { FONT, addLight, addWindowLight, box, circle, ellipse, fitText, line, paperShape, pick, poly, range, roundBox, type Ctx } from '../draw';
 import {
   CLOTHES, CONCRETE, GLASS, GLASS_HI, GOLD, GOLD_DARK, GRILL, INK, LEAF, MARBLE, SIGN_BG, SLAB, TIN, WALLS, WATER, WATER_DARK,
 } from '../palette';
@@ -520,13 +520,13 @@ function skyTower(b: Building, seed: number): Design {
       ctx.save();
       ctx.shadowColor = neon;
       ctx.shadowBlur = b.level >= 5 ? 8 : 3;
-      ctx.font = `800 13px "Baloo 2", sans-serif`;
+      ctx.font = `800 13px ${FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       let size = 13;
       while (size > 6 && ctx.measureText(name.toUpperCase()).width > 68) {
         size -= 0.5;
-        ctx.font = `800 ${size}px "Baloo 2", sans-serif`;
+        ctx.font = `800 ${size}px ${FONT}`;
       }
       ctx.fillStyle = neon;
       ctx.fillText(name.toUpperCase(), 0, towerTop - 8);

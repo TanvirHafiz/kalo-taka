@@ -11,7 +11,7 @@
   --shadow: rgba(70, 42, 16, 0.3);
   --lift: 0 1px 1px rgba(70, 42, 16, 0.22), 0 3px 8px rgba(70, 42, 16, 0.24);
   --ticker-h: 28px;
-  --font: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;
+  --font: 'Baloo 2', 'Baloo Da 2', 'Trebuchet MS', system-ui, sans-serif;
   font-family: var(--font);
   color: var(--ink);
 }
@@ -419,3 +419,17 @@ html, body {
 .set-box p, .set-note { margin: 0; font-size: 13px; color: var(--muted); font-weight: 600; }
 .set-box textarea { width: 100%; box-sizing: border-box; font: 12px ui-monospace, monospace; border-radius: 8px; border: 1px solid var(--kraft); background: var(--paper-2); color: var(--ink); padding: 6px; resize: vertical; }
 .settings button:focus-visible, .settings select:focus-visible, .settings input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* ---- Bangla ---- */
+:root:lang(bn) { --font: 'Baloo Da 2', 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif; }
+/* letter-spacing breaks the Bengali headstroke (matra); vowel signs need taller lines */
+:lang(bn) .hud-label, :lang(bn) .mamun-name, :lang(bn) .ticker-tag, :lang(bn) .settings h3, :lang(bn) .splash-kicker { letter-spacing: 0; text-transform: none; }
+:lang(bn) .hud-label, :lang(bn) .panel-sub, :lang(bn) .sheet-row-title { line-height: 1.45; }
+:lang(bn) .mamun-text, :lang(bn) .toast { line-height: 1.5; }
+.splash-lang { display: flex; gap: 8px; justify-content: center; margin: 0 0 14px; }
+.splash-lang button {
+  min-height: 44px; min-width: 104px; padding: 0 16px; border-radius: 22px; cursor: pointer;
+  font: 800 16px var(--font); border: 2px solid var(--kraft); background: var(--paper); color: var(--ink);
+}
+.splash-lang button.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.splash-lang button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
