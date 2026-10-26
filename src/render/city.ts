@@ -234,6 +234,8 @@ function blit(ctx: Ctx, img: HTMLCanvasElement, p: Plot, s: Sprite, fx: PlotFx |
 export type Pick = { kind: 'plot'; plot: number } | { kind: 'bag' } | { kind: 'briefcase' } | { kind: 'boat' };
 
 /** Owns everything visual that lives between frames: traffic, people, animations and hit areas. */
+/** Above this many device pixels the night lights layer is drawn at half resolution. */
+const LIGHTS_FULL_RES_MAX_PX = 2_200_000;
 const BUBBLE_MS = 3800;
 /** Screen pixels kept clear at the bottom for the ticker and the button row. */
 const BOAT_CLEAR_PX = 110;
@@ -493,9 +495,12 @@ export class CityRenderer {
     if (light.night > 0.02 && ctx.canvas.width > 0 && ctx.canvas.height > 0) {
       // Lights are composed back to front in their own layer: each light source is drawn, then
       // everything standing in front of it is erased, so nothing glows through a pole or a person.
+      // on big canvases the glow layer is drawn at half size and stretched: a quarter of the fill
+      // work for a layer that is soft light anyway
+      const res = ctx.canvas.width * ctx.canvas.height > LIGHTS_FULL_RES_MAX_PX ? 0.5 : 1;
       const base = ctx.getTransform();
-      const L = this.lightLayer(ctx.canvas.width, ctx.canvas.height);
-      L.setTransform(base);
+      const L = this.lightLayer(Math.ceil(ctx.canvas.width * res), Math.ceil(ctx.canvas.height * res));
+      L.setTransform(base.a * res, base.b * res, base.c * res, base.d * res, base.e * res, base.f * res);
       drawSkylineLights(L, cam, gy, state.seed, scale, 1, skyStyle(this.districtInView(state, cam)));
       L.save();
       world(L);
@@ -521,7 +526,7 @@ export class CityRenderer {
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = light.night;
-      ctx.drawImage(L.canvas, 0, 0);
+      ctx.drawImage(L.canvas, 0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.restore();
 
       ctx.save();

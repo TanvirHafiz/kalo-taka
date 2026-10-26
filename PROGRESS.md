@@ -147,13 +147,24 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 - You get back 25% of what it cost (its tier's base cost plus the upgrades it has had). Heat: housing +25 Anger and +15 Media, other buildings +5 Anger and +8 Media, plus +5 Committee either way.
 - Not possible during a permit, an inquiry or the tutorial. A cash bag on the building goes with it. The plot is free to build on at once.
 
-## M6: Polish and balance (in progress)
+## M6: Polish and balance
 
 - [x] Audio and settings panel; reduce-motion and keyboard navigation
 - [x] Remaining districts
 - [x] A debug panel (hidden behind ?debug) with time-skip x10/x100, add money, set heat, trigger any event
 - [x] Balance pass with a headless sim
-- [ ] 60 fps on a mid-range Android phone with 40 buildings
+- [x] 60 fps on a mid-range Android phone with 40 buildings (measured in browser emulation, see below; not yet on a real phone)
+
+### Performance
+
+- Measured with the debug panel's "Fill all plots" (72 maxed buildings) by timing the renderer directly, at night (the worst case, with the lights layer) and by day.
+  - Phone view (375x812 at 2x, zoom 1.5): 1 to 2 ms of script per frame, 95th percentile about 3 ms.
+  - Wide view (1600x900 at 1.56x, zoomed out to 0.6 so about 40 buildings are on screen): median 2 ms by day and 3.5 to 4 ms at night, 90th percentile about 5 ms. The 60 fps budget is 16.7 ms.
+- Fixes made for this:
+  - The canvas pixel ratio is capped at 2 (a 3x phone draws 2.25x fewer pixels, with no visible loss).
+  - Zoomed out (below 0.85x), building sprites are baked at the screen's real density. Before, a wide zoomed-out view overflowed the sprite cache and re-baked buildings every few frames (95th percentile 47 ms).
+  - On canvases over 2.2 megapixels the night lights layer is drawn at half size and stretched, a quarter of the fill work for soft light.
+- Not verified on a real mid-range Android phone. Open the game there with `?debug` and the panel's readout shows the script time per frame.
 
 ### Audio and settings
 

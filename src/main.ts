@@ -309,9 +309,12 @@ const buttons = createButtonRow(overlay, {
 }, showToast);
 
 // --- Resize and DPR --------------------------------------------------------
+/** Canvas pixel ratio cap. */
+const MAX_DPR = 2;
 let dpr = 1;
 function resize(): void {
-  dpr = window.devicePixelRatio || 1;
+  // above 2x the extra pixels are invisible on a phone but cost fill rate every frame
+  dpr = Math.min(MAX_DPR, window.devicePixelRatio || 1);
   cam.viewW = canvas.clientWidth;
   cam.viewH = canvas.clientHeight;
   canvas.width = Math.round(cam.viewW * dpr);

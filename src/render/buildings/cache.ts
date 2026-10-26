@@ -52,9 +52,13 @@ function designFor(b: Building, seed: number): Design {
   }
 }
 
-/** Two scale buckets only, so pinch-zoom never re-renders at every step. DPR is capped at 2. */
+/**
+ * Three scale buckets, so pinch-zoom never re-renders at every step. Zoomed out, sprites are baked
+ * at the screen's real density: a wide view shows ~40 buildings, and full-size sprites (plus their
+ * night lights) would overflow the cache and re-bake every few frames. DPR is capped at 2.
+ */
 export function spriteScale(dpr: number, zoom: number): number {
-  return Math.min(2, Math.max(1, dpr)) * (zoom > 1.1 ? 1.5 : 1);
+  return Math.min(2, Math.max(1, dpr)) * (zoom > 1.1 ? 1.5 : zoom < 0.85 ? 0.6 : 1);
 }
 
 export function getSprite(runSeed: number, plotIndex: number, b: Building, scale: number): Sprite {
