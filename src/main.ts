@@ -259,7 +259,11 @@ const nephewsSheet = createSheet(overlay, nephewsView, dispatch, () => closeAll(
 const fleeSheet = createSheet(overlay, fleeView, dispatch, () => closeAll());
 const settingsPanel = createSettingsPanel(overlay, {
   getState: () => state,
-  load: (next) => replaceState({ ...next, lastSimTime: Date.now(), events: [] }),
+  load: (next) => {
+    replaceState({ ...next, lastSimTime: Date.now(), events: [] });
+    if (!state.tutorial.done) sayTutorial(state.tutorial.step);
+    else sayEvent();
+  },
   reset: () => {
     replaceState(createInitialState(randomSeed(), Date.now()));
     sayTutorial(0);
@@ -285,6 +289,7 @@ function replaceState(next: GameState): void {
 
 function closeAll(): void {
   settingsPanel?.close();
+  endMove();
   panel.close();
   postersSheet.close();
   nephewsSheet.close();
@@ -296,6 +301,7 @@ const buttons = createButtonRow(overlay, {
     fleeSheet.open();
     fleeSheet.update(state);
     debug?.update(state);
+    audio.setTraffic(trafficFill(baseIncome(state)));
   },
   build: openBuild,
   posters: () => {
@@ -413,6 +419,7 @@ function endPointer(e: PointerEvent, tap: boolean): void {
     postersSheet.close();
     nephewsSheet.close();
     fleeSheet.close();
+    settingsPanel.close();
     panel.open(hit.plot);
     panel.update(state);
   }
@@ -498,7 +505,6 @@ function frame(): void {
     mamun.refresh(mamunButtons);
   }
   ticker.update(dtUi, tickerDefaults());
-  audio.setTraffic(trafficFill(baseIncome(state)));
   ambientIn -= dtUi;
   if (ambientIn <= 0) {
     ambientIn = 25_000 + Math.random() * 35_000;

@@ -40,7 +40,8 @@ const cache = new Map<string, Sprite>();
 let pixels = 0;
 
 export function buildingSeed(runSeed: number, plotIndex: number, b: Building): number {
-  return hashSeed(runSeed, plotIndex, b.tier, CATEGORY_INDEX[b.category]);
+  // a relocated building carries the look of the plot it was built on
+  return hashSeed(runSeed, b.look ?? plotIndex, b.tier, CATEGORY_INDEX[b.category]);
 }
 
 function designFor(b: Building, seed: number): Design {

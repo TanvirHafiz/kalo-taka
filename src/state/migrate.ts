@@ -92,8 +92,22 @@ function isBuilding(x: unknown): boolean {
   const tiers = BUILDINGS[b.category as Category].length;
   return (
     Number.isInteger(b.tier) && (b.tier as number) >= 1 && (b.tier as number) <= tiers &&
-    Number.isInteger(b.level) && (b.level as number) >= 1 && (b.level as number) <= BALANCE.maxLevel
+    Number.isInteger(b.level) && (b.level as number) >= 1 && (b.level as number) <= BALANCE.maxLevel &&
+    (b.look === undefined || Number.isInteger(b.look))
   );
+}
+
+const JOB_KINDS = ['build', 'upgrade', 'merge', 'fill', 'move'];
+
+/** A permit job from a save: a known kind, a deadline, and a valid result building if it has one. */
+function isJob(x: unknown): boolean {
+  if (x === null) return true;
+  if (typeof x !== 'object') return false;
+  const j = x as Raw;
+  if (!JOB_KINDS.includes(j.kind as string) || !finite(j.until)) return false;
+  if (j.result !== undefined && (j.result === null || !isBuilding(j.result))) return false;
+  if ((j.kind === 'merge' || j.kind === 'move') && !Number.isInteger(j.partner)) return false;
+  return true;
 }
 
 function isPlot(x: unknown, i: number): boolean {
@@ -107,7 +121,7 @@ function isPlot(x: unknown, i: number): boolean {
     typeof p.owned === 'boolean' &&
     typeof p.grabbed === 'boolean' &&
     isBuilding(p.building) &&
-    (p.job === null || (typeof p.job === 'object' && typeof (p.job as Raw).kind === 'string' && finite((p.job as Raw).until)))
+    isJob(p.job)
   );
 }
 

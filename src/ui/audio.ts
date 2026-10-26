@@ -12,12 +12,15 @@ export interface Audio {
 }
 
 const COIN_GAP_MS = 250; // at most 4 coin ticks a second
+/** The same sound never starts twice within this gap (a burst of permits clearing stays one stamp). */
+const SAME_SOUND_GAP_MS = 120;
 
 export function createAudio(): Audio {
   let ac: AudioContext | null = null;
   let master: GainNode, sfx: GainNode, amb: GainNode, music: GainNode, hum: GainNode;
   let noise: AudioBuffer;
-  let lastCoin = 0;
+  const lastPlayed: Partial<Record<Sfx, number>> = {};
+  let failed = false;
   let traffic = 0;
 
   const apply = (s: Settings) => {
@@ -30,15 +33,30 @@ export function createAudio(): Audio {
   };
 
   const start = () => {
+    if (failed) return;
     if (ac) {
-      if (ac.state === 'suspended' && document.visibilityState === 'visible') void ac.resume();
+      // iOS can also leave the context 'interrupted' after a call or Siri
+      if (ac.state !== 'running' && ac.state !== 'closed' && document.visibilityState === 'visible') ac.resume().catch(() => undefined);
       return;
     }
     const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctor) return;
-    ac = new Ctor();
+    if (!Ctor) {
+      failed = true;
+      return;
+    }
+    try {
+      ac = new Ctor();
+    } catch {
+      failed = true;
+      return;
+    }
+    // a gentle limiter, so sounds that land together never clip
+    const limiter = ac.createDynamicsCompressor();
+    limiter.threshold.value = -12;
+    limiter.ratio.value = 8;
+    limiter.connect(ac.destination);
     master = ac.createGain();
-    master.connect(ac.destination);
+    master.connect(limiter);
     sfx = ac.createGain();
     amb = ac.createGain();
     music = ac.createGain();
@@ -61,11 +79,12 @@ export function createAudio(): Audio {
     apply(getSettings());
     setTrafficGain();
   };
-  for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, start, { passive: true });
+  // pointerdown alone is not a "user activation" for touch on Safari; pointerup, touchend and click are
+  for (const ev of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const) window.addEventListener(ev, start, { passive: true });
   document.addEventListener('visibilitychange', () => {
     if (!ac) return;
-    if (document.visibilityState === 'hidden') void ac.suspend();
-    else void ac.resume();
+    if (document.visibilityState === 'hidden') ac.suspend().catch(() => undefined);
+    else ac.resume().catch(() => undefined);
   });
   onSettings(apply);
 
@@ -155,11 +174,9 @@ export function createAudio(): Audio {
   return {
     play(name) {
       if (!ac || ac.state !== 'running') return;
-      if (name === 'coin') {
-        const now = performance.now();
-        if (now - lastCoin < COIN_GAP_MS) return;
-        lastCoin = now;
-      }
+      const now = performance.now();
+      if (now - (lastPlayed[name] ?? -Infinity) < (name === 'coin' ? COIN_GAP_MS : SAME_SOUND_GAP_MS)) return;
+      lastPlayed[name] = now;
       sounds[name](ac.currentTime + 0.01);
     },
     setTraffic(density) {

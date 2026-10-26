@@ -227,8 +227,11 @@ export function completeJob(state: GameState, plot: number): GameState {
       if (!job.result) return job.partner !== undefined ? completeJob(state, job.partner) : state;
       // the lead plot holds the moving building; the other building (if any) takes its place
       const to = job.partner!;
-      const other = plotById(state, to)?.building ?? null;
-      let s = patchPlots(state, { [plot]: { building: other, job: null }, [to]: { building: job.result, job: null } });
+      const o = plotById(state, to)?.building;
+      // each building keeps its looks (they come from the plot it was built on)
+      const other = o ? { ...o, look: o.look ?? to } : null;
+      const moving = { ...job.result, look: job.result.look ?? plot };
+      let s = patchPlots(state, { [plot]: { building: other, job: null }, [to]: { building: moving, job: null } });
       if (s.inquiry?.plot === plot) s = { ...s, inquiry: { ...s.inquiry, plot: to } };
       else if (s.inquiry?.plot === to) s = { ...s, inquiry: { ...s.inquiry, plot } };
       if (s.bag && (s.bag.plot === plot || s.bag.plot === to)) s = scheduleBag({ ...s, bag: null }, s.lastSimTime);

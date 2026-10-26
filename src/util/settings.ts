@@ -57,7 +57,13 @@ function applyToPage(): void {
   if (typeof document !== 'undefined') document.documentElement.classList.toggle('reduce-motion', reduceMotion());
 }
 
+let watching = false;
+
 export function loadSettings(): Settings {
+  if (!watching && typeof matchMedia === 'function') {
+    watching = true;
+    matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', applyToPage);
+  }
   try {
     current = parseSettings(localStorage.getItem(SETTINGS_KEY));
   } catch {

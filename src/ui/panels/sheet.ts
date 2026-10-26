@@ -39,6 +39,7 @@ export function createSheet(root: HTMLElement, view: (s: GameState) => SheetView
   const el = document.createElement('section');
   el.className = 'panel sheet';
   el.setAttribute('aria-hidden', 'true');
+  el.inert = true;
   el.innerHTML = `
     <div class="panel-head"><div><h2 class="panel-title"></h2><div class="panel-sub"></div></div><button class="panel-close" type="button" aria-label="${STRINGS.plot.close}">×</button></div>
     <p class="sheet-intro"></p>
@@ -70,6 +71,7 @@ export function createSheet(root: HTMLElement, view: (s: GameState) => SheetView
       open = true;
       el.classList.add('open');
       el.setAttribute('aria-hidden', 'false');
+      el.inert = false;
       el.querySelector<HTMLElement>('.panel-close')!.focus();
     },
     close() {
@@ -77,6 +79,7 @@ export function createSheet(root: HTMLElement, view: (s: GameState) => SheetView
       open = false;
       el.classList.remove('open');
       el.setAttribute('aria-hidden', 'true');
+      el.inert = true;
       if (el.contains(document.activeElement)) returnFocus?.focus();
     },
     update(state) {

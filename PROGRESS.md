@@ -140,6 +140,7 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 - "Relocation permit" on a building's card, then tap an empty plot you own to move it there, or another of your buildings to swap the two. Tap the moving building again, press Esc or hit Cancel on the banner to back out.
 - Costs 60 s of the moving building's rent (both buildings' rent for a swap, ৳50,000 minimum), a 15 s permit with both plots locked (buildings keep earning where they stand; speed money works on the moving one), and +5 Committee.
 - Not possible during a permit, an inquiry or the tutorial, or onto a side business. A cash bag on either plot goes; plot-bound things (grabbed flag, generator, flyover frontage) stay with the plot.
+- A moved building keeps its looks (colours, windows, sign). Things tied to the land stay with the plot by design: the grabbed flag, a generator, flyover frontage, and being dark in a load-shedding. Moving off a dark plot lights the building, but the 60 s fee costs more than the outage would.
 
 ### Eviction drive (added on request)
 
@@ -172,7 +173,8 @@ Play online: https://tanvirhafiz.github.io/kalo-taka/
 - Music has its own volume slider but no track yet (as the spec says).
 - Settings (the Settings button): master, effects, street hum and music volume; motion (follow your device, reduce, or full; reduce stops shakes, dust, the ticker scroll and button pulses); numbers (lakh and crore, or short K/M/B/T then 1.2e15); news ticker speed; export save (a code to copy), import save (checked before it replaces anything), and hard reset with a second tap to confirm. Settings are stored apart from the save, so a reset or import keeps them.
 - Import and reset save the new game at once, so the autosave cannot write the old one back.
-- Keyboard: Tab moves through the HUD, buttons and panels, Enter activates, Esc closes panels and cancels a relocation. Sheets move focus to their close button when they open and hand it back when they close.
+- Keyboard: Tab moves through the HUD, buttons and open panels (closed panels are inert, so Tab skips them), Enter activates, Esc closes panels and cancels a relocation. Sheets move focus to their close button when they open and hand it back when they close. Selecting a plot on the street still needs a tap or click.
+- Sound fixes after review: the same sound never starts twice within 120 ms and a limiter stops clipping when several land at once; audio also unlocks on tap release and click (Safari on iPhone needs that).
 
 ### Balance pass
 

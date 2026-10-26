@@ -7,6 +7,8 @@ export interface Building {
   category: Category;
   tier: number;
   level: number;
+  /** The seed its looks come from, once it has been relocated (otherwise its plot's id). */
+  look?: number;
 }
 
 export type Row = 'front' | 'back';

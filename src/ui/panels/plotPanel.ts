@@ -4,7 +4,7 @@ import { BALANCE, CORRUPTION } from '../../config/balance';
 import { BUILDINGS, CATEGORIES } from '../../config/buildings';
 import { STRINGS, errorText, fmt, type ErrorKey } from '../../config/strings';
 import { buildingSeed } from '../../render/buildings/cache';
-import { canBuild, canBuyPlot, canEvict, canGrab, canInquiry, canMerge, canSpeedMoney, canUpgrade, evictRefund, upgradePlan } from '../../sim/actions';
+import { relocateCost, canBuild, canBuyPlot, canEvict, canGrab, canInquiry, canMerge, canSpeedMoney, canUpgrade, evictRefund, upgradePlan } from '../../sim/actions';
 import { inquiryCost, isFrozen, isLockJob, speedMoneyCost, waterPumpCost } from '../../sim/corruption';
 import { buildCost, neighbourBonus, patients, plotCost, plotIncome, tierDef } from '../../sim/economy';
 import { plotById } from '../../sim/layout';
@@ -164,7 +164,9 @@ function viewFor(state: GameState, id: number, count: UpgradeCount): View {
     label: STRINGS.plot.relocate,
     note: STRINGS.plot.relocateNote,
     move: true,
-    error: state.tutorial.done ? null : 'tutorialRunning',
+    // the price of moving to an empty plot (a swap also pays for the other building)
+    cost: relocateCost(state, id, -1),
+    error: !state.tutorial.done ? 'tutorialRunning' : state.taka < relocateCost(state, id, -1) ? 'notEnoughTaka' : null,
     action: { type: 'relocate', from: id, to: id },
   });
   buttons.push({
@@ -188,6 +190,7 @@ export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void
   const el = document.createElement('section');
   el.className = 'panel';
   el.setAttribute('aria-hidden', 'true');
+  el.inert = true;
   el.setAttribute('aria-label', 'Plot');
   el.innerHTML = `
     <div class="panel-head"><div><h2 class="panel-title"></h2><div class="panel-sub"></div></div><button class="panel-close" type="button" aria-label="${STRINGS.plot.close}">×</button></div>
@@ -253,11 +256,13 @@ export function createPlotPanel(root: HTMLElement, dispatch: (a: Action) => void
       selected = plot;
       el.classList.add('open');
       el.setAttribute('aria-hidden', 'false');
+      el.inert = false;
     },
     close() {
       selected = null;
       el.classList.remove('open');
       el.setAttribute('aria-hidden', 'true');
+      el.inert = true;
     },
     update(state) {
       last = state;

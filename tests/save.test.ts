@@ -56,3 +56,16 @@ describe('save/load', () => {
     expect(importSave('!!!garbage')).toBeNull();
   });
 });
+
+describe('save validation of jobs (M6)', () => {
+  it('rejects unknown job kinds and merge/move jobs without a partner', async () => {
+    const { migrate } = await import('../src/state/migrate');
+    const { createInitialState, SAVE_VERSION } = await import('../src/state/initialState');
+    const base = createInitialState(5, 1_750_000_000_000);
+    const withJob = (job: unknown) => ({ ...base, version: SAVE_VERSION, plots: base.plots.map((p, i) => (i === 0 ? { ...p, owned: true, job } : p)) });
+    expect(migrate(withJob({ kind: 'build', start: 0, until: 1, result: { category: 'housing', tier: 1, level: 1 } }))).not.toBeNull();
+    expect(migrate(withJob({ kind: 'teleport', start: 0, until: 1 }))).toBeNull();
+    expect(migrate(withJob({ kind: 'move', start: 0, until: 1, result: { category: 'housing', tier: 1, level: 1 } }))).toBeNull();
+    expect(migrate(withJob({ kind: 'build', start: 0, until: 1, result: { category: 'housing', tier: 99, level: 1 } }))).toBeNull();
+  });
+});

@@ -37,7 +37,9 @@ describe('relocation permit', () => {
     expect(applyAction(s, { type: 'build', plot: to, category: 'housing' }).error).toBe('permitPending');
     s = at(s, T0 + CORRUPTION.permitRelocate * 1000);
     expect(front(s, 0).building).toBeNull();
-    expect(front(s, 4).building).toEqual(H(2, 6));
+    expect(front(s, 4).building).toMatchObject(H(2, 6));
+    // it keeps the look it had on its old plot
+    expect(front(s, 4).building!.look).toBe(from);
     expect(front(s, 0).job).toBeNull();
     expect(front(s, 4).job).toBeNull();
     expect(s.events.some((e) => e.kind === 'moved')).toBe(true);
@@ -49,8 +51,8 @@ describe('relocation permit', () => {
     expect(relocateCost(s, a, b)).toBeGreaterThan(relocateCost(s, a, front(s, 5).index));
     s = applyAction(s, { type: 'relocate', from: a, to: b }).state;
     s = at(s, T0 + CORRUPTION.permitRelocate * 1000);
-    expect(front(s, 0).building).toEqual(F(1, 2));
-    expect(front(s, 3).building).toEqual(H(3, 10));
+    expect(front(s, 0).building).toMatchObject(F(1, 2));
+    expect(front(s, 3).building).toMatchObject({ ...H(3, 10), look: a });
   });
 
   it('speed money on either plot finishes the move', () => {
@@ -59,7 +61,7 @@ describe('relocation permit', () => {
     s = applyAction(s, { type: 'relocate', from, to }).state;
     expect(applyAction(s, { type: 'speedMoney', plot: to }).error).toBe('noPermit');
     s = applyAction(s, { type: 'speedMoney', plot: from }).state;
-    expect(front(s, 2).building).toEqual(H(2, 3));
+    expect(front(s, 2).building).toMatchObject(H(2, 3));
   });
 
   it('is refused for the same plot, unowned plots, frozen buildings and the tutorial', () => {

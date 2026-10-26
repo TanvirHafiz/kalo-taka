@@ -164,10 +164,10 @@ function drawGate(ctx: Ctx, x: number, name: string): void {
 /** The plot's number (as on its card), on the footpath below it; back-row numbers sit at their base. */
 function plotNumber(ctx: Ctx, p: Plot): void {
   const back = p.row === 'back';
-  const x = plotCenter(p) - (back ? 40 * BACK_SCALE : 44);
+  const x = plotCenter(p) - (back ? 42 * BACK_SCALE : 46);
   const y = back ? BACK_Y + 4 : FOOTPATH_H * 0.5;
-  circle(ctx, x, y, 7, back ? 'rgba(58,46,37,0.55)' : 'rgba(58,46,37,0.8)', false);
-  fitText(ctx, String(p.slot + 1), x, y + 0.5, 12, 9, '#fffaf0', 800);
+  circle(ctx, x, y, 9, back ? 'rgba(58,46,37,0.55)' : 'rgba(58,46,37,0.8)', false);
+  fitText(ctx, String(p.slot + 1), x, y + 0.5, 15, 12, '#fffaf0', 800);
 }
 
 function levelBadge(ctx: Ctx, cx: number, level: number): void {

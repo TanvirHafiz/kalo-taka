@@ -28,6 +28,7 @@ export function createSettingsPanel(root: HTMLElement, hooks: SettingsHooks): Se
   const el = document.createElement('section');
   el.className = 'panel sheet settings';
   el.setAttribute('aria-hidden', 'true');
+  el.inert = true;
   el.setAttribute('aria-label', S.title);
   const slider = (key: keyof Settings, label: string) =>
     `<label class="set-row"><span>${label}</span><input type="range" min="0" max="100" step="5" data-key="${key}"><output></output></label>`;
@@ -143,6 +144,7 @@ export function createSettingsPanel(root: HTMLElement, hooks: SettingsHooks): Se
       fill();
       el.classList.add('open');
       el.setAttribute('aria-hidden', 'false');
+      el.inert = false;
       el.querySelector<HTMLElement>('.panel-close')!.focus();
     },
     close() {
@@ -152,6 +154,7 @@ export function createSettingsPanel(root: HTMLElement, hooks: SettingsHooks): Se
       importBox.hidden = true;
       el.classList.remove('open');
       el.setAttribute('aria-hidden', 'true');
+      el.inert = true;
       returnFocus?.focus();
     },
   };
