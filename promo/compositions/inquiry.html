@@ -1,0 +1,40 @@
+<template>
+  <style>
+
+@font-face { font-family: 'Baloo 2'; font-weight: 600; src: url('assets/fonts/baloo-2-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 700; src: url('assets/fonts/baloo-2-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 800; src: url('assets/fonts/baloo-2-latin-800-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 700; src: url('assets/fonts/baloo-da-2-bengali-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 800; src: url('assets/fonts/baloo-da-2-bengali-800-normal.woff2') format('woff2'); }
+
+
+#root { position: absolute; inset: 0; overflow: hidden; font-family: 'Baloo 2', 'Baloo Da 2', sans-serif; color: #3a2e25; }
+#root .stage { position: absolute; inset: 0; overflow: hidden; }
+#root .kb { position: absolute; inset: 0; }
+#root .shot { position: absolute; max-width: none; }
+#root .cursor { position: absolute; width: 90px; height: 126px; left: 0; top: 0; }
+#root .dim { position: absolute; inset: 0; background: #1b1712; opacity: 0; }
+
+
+#inquiry-stage { opacity: 0; }
+#inquiry-kb { transform-origin: 960px 420px; }
+
+  </style>
+  <div data-hf-id="hf-9eww" id="root" data-composition-id="inquiry" data-width="1920" data-height="1080">
+
+    <div data-hf-id="hf-9r7q" id="inquiry-stage" class="stage">
+      <div data-hf-id="hf-nl4q" id="inquiry-kb" class="kb"><img data-hf-id="hf-w79z" class="shot" data-layout-allow-overflow="" src="assets/shots/inquiry.jpg" alt="" style="width:5760.0px;height:3240.0px;left:-1920.0px;top:-1680.0px;"></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const D = 4.386;
+
+    // hard cut on the transition centre, after the outgoing frame dipped
+    tl.set("#inquiry-stage", { opacity: 1 }, 0.25);
+    tl.fromTo("#inquiry-kb", { scale: 1 }, { scale: 1.12, duration: D - 0.5, ease: "power2.inOut" }, 0.25);
+    tl.to("#inquiry-kb", { y: -1080, duration: 0.28, ease: "power3.in" }, D - 0.5);
+
+    window.__timelines["inquiry"] = tl;
+  </script>
+</template>

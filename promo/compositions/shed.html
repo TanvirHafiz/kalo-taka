@@ -1,0 +1,36 @@
+<template>
+  <style>
+
+@font-face { font-family: 'Baloo 2'; font-weight: 600; src: url('assets/fonts/baloo-2-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 700; src: url('assets/fonts/baloo-2-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 800; src: url('assets/fonts/baloo-2-latin-800-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 700; src: url('assets/fonts/baloo-da-2-bengali-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 800; src: url('assets/fonts/baloo-da-2-bengali-800-normal.woff2') format('woff2'); }
+
+
+#root { position: absolute; inset: 0; overflow: hidden; font-family: 'Baloo 2', 'Baloo Da 2', sans-serif; color: #3a2e25; }
+#root .stage { position: absolute; inset: 0; overflow: hidden; }
+#root .kb { position: absolute; inset: 0; }
+#root .shot { position: absolute; max-width: none; }
+#root .cursor { position: absolute; width: 90px; height: 126px; left: 0; top: 0; }
+#root .dim { position: absolute; inset: 0; background: #1b1712; opacity: 0; }
+
+
+#shed-kb { transform-origin: 208px 678px; }
+
+  </style>
+  <div data-hf-id="hf-fryx" id="root" data-composition-id="shed" data-width="1920" data-height="1080">
+
+    <div data-hf-id="hf-huxj" id="shed-stage" class="stage">
+      <div data-hf-id="hf-1qtn" id="shed-kb" class="kb"><img data-hf-id="hf-gwzq" class="shot" data-layout-allow-overflow="" src="assets/shots/start_tinshed.jpg" alt="" style="width:3072.0px;height:1728.0px;left:0.0px;top:-649.6px;"></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const D = 4.137;
+
+    tl.fromTo("#shed-kb", { scale: 1.4 }, { scale: 1.85, duration: D - 0.5, ease: "power2.inOut" }, 0);
+tl.to("#shed-stage", { x: -1920, duration: 0.5, ease: "power3.inOut" }, D - 0.5);
+    window.__timelines["shed"] = tl;
+  </script>
+</template>

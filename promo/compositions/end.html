@@ -1,0 +1,70 @@
+<template>
+  <style>
+
+@font-face { font-family: 'Baloo 2'; font-weight: 600; src: url('assets/fonts/baloo-2-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 700; src: url('assets/fonts/baloo-2-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 800; src: url('assets/fonts/baloo-2-latin-800-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 700; src: url('assets/fonts/baloo-da-2-bengali-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 800; src: url('assets/fonts/baloo-da-2-bengali-800-normal.woff2') format('woff2'); }
+
+
+#root { position: absolute; inset: 0; overflow: hidden; font-family: 'Baloo 2', 'Baloo Da 2', sans-serif; color: #3a2e25; }
+#root .stage { position: absolute; inset: 0; overflow: hidden; }
+#root .kb { position: absolute; inset: 0; }
+#root .shot { position: absolute; max-width: none; }
+#root .cursor { position: absolute; width: 90px; height: 126px; left: 0; top: 0; }
+#root .dim { position: absolute; inset: 0; background: #1b1712; opacity: 0; }
+
+
+#end-stage { background: #f3e9d2; opacity: 0; }
+#end-claim { position: absolute; inset: 0; padding: 0 0 0 200px; display: flex; flex-direction: column; justify-content: center; box-sizing: border-box; }
+#end-claim p { margin: 0; font-weight: 800; font-size: 132px; line-height: 1.02; letter-spacing: -0.02em; }
+#end-claim .acc { color: #c8553d; }
+#end-card { position: absolute; inset: 0; padding: 0 200px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 26px; box-sizing: border-box; opacity: 0; }
+#end-lockup { display: flex; align-items: baseline; gap: 34px; }
+#end-name { font-weight: 800; font-size: 180px; line-height: 0.95; letter-spacing: -0.02em; }
+#end-ltd { font-weight: 700; font-size: 72px; line-height: 1; }
+#end-lang { display: flex; gap: 14px; }
+#end-lang span { font-weight: 800; font-size: 40px; line-height: 1; padding: 18px 34px 12px; border-radius: 40px; border: 4px solid #e3cfa8; background: #fbf6ea; }
+#end-lang .on { background: #3a2e25; color: #fbf6ea; border-color: #3a2e25; }
+#end-lang .bn { font-family: 'Baloo Da 2', sans-serif; }
+#end-cta { margin: 10px 0 0; font-weight: 700; font-size: 56px; line-height: 1.1; }
+#end-url { margin: 0; font-weight: 800; font-size: 64px; line-height: 1.1; color: #c8553d; }
+
+  </style>
+  <div data-hf-id="hf-gwfo" id="root" data-composition-id="end" data-width="1920" data-height="1080">
+
+    <div data-hf-id="hf-rpze" id="end-stage" class="stage">
+      <div data-hf-id="hf-d1rz" id="end-claim">
+        <p data-hf-id="hf-pjo5" id="end-l1">From tin shed to sky tower.</p>
+        <p data-hf-id="hf-kw8d" id="end-l2">Paperwork <span data-hf-id="hf-qh12" class="acc">optional.</span></p>
+      </div>
+      <div data-hf-id="hf-teh3" id="end-card">
+        <div data-hf-id="hf-u2tv" id="end-lockup"><span data-hf-id="hf-a4ix" id="end-name">Kalo Taka</span><span data-hf-id="hf-gtxb" id="end-ltd">Private Limited</span></div>
+        <div data-hf-id="hf-kmxt" id="end-lang"><span data-hf-id="hf-2786" class="on">English</span><span data-hf-id="hf-tybb" class="bn">বাংলা</span></div>
+        <p data-hf-id="hf-li90" id="end-cta">Play free in your browser</p>
+        <p data-hf-id="hf-hnd0" id="end-url" data-var-text="url">tanvirhafiz.github.io/kalo-taka</p>
+      </div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const D = 5.157;
+
+    tl.fromTo("#end-stage", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.15, ease: "power2.out" }, 0.25);
+    tl.fromTo("#end-l1", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "power2.out" }, 0.4);
+    tl.fromTo("#end-l2", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "power2.out" }, 1.0);
+    // the claim clears on the bar and the card is printed in its place
+    tl.to("#end-claim", { opacity: 0, filter: "blur(8px)", duration: 0.18, ease: "power2.in" }, 2.05);
+    tl.set("#end-card", { opacity: 1 }, 2.23);
+    tl.fromTo("#end-name", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 2.23);
+    tl.fromTo("#end-ltd", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" }, 2.4);
+    tl.fromTo("#end-lang span", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.6)", stagger: 0.09 }, 2.6);
+    tl.fromTo("#end-cta", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "power2.out" }, 2.85);
+    tl.fromTo("#end-url", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "power2.out" }, 2.97);
+    // the last half second settles to kraft
+    tl.to("#end-card", { opacity: 0, duration: 0.45, ease: "power1.in" }, D - 0.5);
+
+    window.__timelines["end"] = tl;
+  </script>
+</template>

@@ -1,0 +1,53 @@
+<template>
+  <style>
+
+@font-face { font-family: 'Baloo 2'; font-weight: 600; src: url('assets/fonts/baloo-2-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 700; src: url('assets/fonts/baloo-2-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 800; src: url('assets/fonts/baloo-2-latin-800-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 700; src: url('assets/fonts/baloo-da-2-bengali-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 800; src: url('assets/fonts/baloo-da-2-bengali-800-normal.woff2') format('woff2'); }
+
+
+#root { position: absolute; inset: 0; overflow: hidden; font-family: 'Baloo 2', 'Baloo Da 2', sans-serif; color: #3a2e25; }
+#root .stage { position: absolute; inset: 0; overflow: hidden; }
+#root .kb { position: absolute; inset: 0; }
+#root .shot { position: absolute; max-width: none; }
+#root .cursor { position: absolute; width: 90px; height: 126px; left: 0; top: 0; }
+#root .dim { position: absolute; inset: 0; background: #1b1712; opacity: 0; }
+
+
+#title-stage .blk { position: absolute; top: 0; width: 322px; height: 1080px; background: #f3e9d2; }
+#title-content { position: absolute; inset: 0; padding: 0 0 0 220px; display: flex; flex-direction: column; justify-content: center; gap: 0; box-sizing: border-box; }
+#title-name { margin: 0; font-weight: 800; font-size: 260px; line-height: 0.9; letter-spacing: -0.02em; color: #3a2e25; }
+#title-name .ltr { display: inline-block; }
+#title-sub { margin: 18px 0 0 10px; font-weight: 700; font-size: 84px; line-height: 1; color: #3a2e25; }
+#title-stamp-wrap { position: absolute; left: 1040px; top: 690px; }
+#title-stamp { font-weight: 800; font-size: 64px; line-height: 1; letter-spacing: 0.03em; color: #c8553d; border: 9px solid #c8553d; border-radius: 14px; padding: 16px 30px 6px; }
+
+  </style>
+  <div data-hf-id="hf-wt3v" id="root" data-composition-id="title" data-width="1920" data-height="1080">
+
+    <div data-hf-id="hf-kcyr" id="title-stage" class="stage">
+      <div data-hf-id="hf-pnpz" class="blk" id="title-b0" style="left:0px"></div><div data-hf-id="hf-459h" class="blk" id="title-b1" style="left:320px"></div><div data-hf-id="hf-l2f3" class="blk" id="title-b2" style="left:640px"></div><div data-hf-id="hf-sz6t" class="blk" id="title-b3" style="left:960px"></div><div data-hf-id="hf-5ctg" class="blk" id="title-b4" style="left:1280px"></div><div data-hf-id="hf-8pi5" class="blk" id="title-b5" style="left:1600px"></div>
+      <div data-hf-id="hf-0jy5" id="title-content">
+        <h1 data-hf-id="hf-zlep" id="title-name"><span data-hf-id="hf-eetu" class="ltr">K</span><span data-hf-id="hf-oqsk" class="ltr">a</span><span data-hf-id="hf-t45v" class="ltr">l</span><span data-hf-id="hf-spuu" class="ltr">o</span><span data-hf-id="hf-p0yb" class="gap"> </span><span data-hf-id="hf-6v0b" class="ltr">T</span><span data-hf-id="hf-fm1o" class="ltr">a</span><span data-hf-id="hf-r4mq" class="ltr">k</span><span data-hf-id="hf-ef4l" class="ltr">a</span></h1>
+        <p data-hf-id="hf-k300" id="title-sub">Private Limited</p>
+        <div data-hf-id="hf-397o" id="title-stamp-wrap"><div data-hf-id="hf-nsg2" id="title-stamp">PAPERWORK OPTIONAL</div></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const D = 4.387;
+
+    // six strips of kraft drop in, staggered, and become the ground
+    tl.fromTo("#title-stage .blk", { y: -1090 }, { y: 0, duration: 0.42, ease: "power3.out", stagger: 0.035 }, 0);
+    // the name prints letter by letter
+    tl.fromTo("#title-name .ltr", { opacity: 0.12, y: 26 }, { opacity: 1, y: 0, duration: 0.22, ease: "expo.out", stagger: 0.1 }, 0.62);
+    tl.fromTo("#title-sub", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 1.55);
+    // the stamp lands on the bar line
+    tl.fromTo("#title-stamp", { scale: 1.9, rotation: -16, opacity: 0 }, { scale: 1, rotation: -7, opacity: 1, duration: 0.3, ease: "back.out(2.2)" }, 2.19);
+tl.to("#title-stage", { x: -1920, duration: 0.5, ease: "power3.inOut" }, D - 0.5);
+    window.__timelines["title"] = tl;
+  </script>
+</template>

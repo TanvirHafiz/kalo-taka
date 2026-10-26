@@ -1,0 +1,23 @@
+# SPEC: Kalo Taka promo, "The Ticker" (storyline A)
+
+GOAL:    The viewer laughs at a mock news bulletin and leaves knowing it is a free browser game where you get rich by bending every rule.
+OUTPUT:  HyperFrames, 1920 x 1080, 30 fps, MP4.
+TIME:    36.0 s x 30 = 1080 frames. Music: assets/audio/music.mp3 (Runware MiniMax Music 2.6, take B, trimmed from 1.0 s, -16 LUFS), 123.5 BPM, beat 0.4858 s (14.57 frames), bar 1.9433 s. Scenes start on bar lines.
+
+LOOK:    Ground: kraft paper #f3e9d2 with the game's own paper grain (it is in every screenshot). Ink #3a2e25. Accent #c8553d only on the ticker band, stamps and one word per title. Mustard #e9c46a only on the BREAKING tag and stars.
+         Display: Baloo 2 800, 132-200 px, tracking -0.02em. Ticker: Baloo 2 700, 40 px on a 76 px red band with a mustard 44 px-tall BREAKING tag (the game's ticker at 2.7x). Bangla: Baloo Da 2 800.
+         Medium: the game's own screenshots (3840 x 2160 captures at 2x) cropped to the street band and shown at 1.6-2x their in-game size; paper pieces (cards, stamps) with a 0 6 0 rgba(70,42,16,0.25) shadow. No blur glows, no gradients.
+OBJECTS: the tin shed on plot 1; the plot card's "Grab it" button; a playground under sand trucks; the Speed Money button; posters with the tycoon's face on lamp posts and election bunting; a street by day and the same city lit at night; the Anti-Durniti Committee stamp with its countdown; the Flee to Canada sheet; the airport with a tower of suitcases; the Jamai in a hard hat. A big paper cursor (90 px, ink outline 5 px) for clicks.
+MOTION:  Arrivals expo.out 0.5 s; camera moves power2.inOut; exits and whips power3.in 0.25 s; stamps back.out(2.2) 0.3 s from scale 1.8; ticker headline whips in from the right in 0.3 s with 12 px horizontal blur, then holds dead still. Ken Burns: one move per shot, 4-8% scale over the shot. Word staggers 0.07 s.
+SHOTS:
+  1  0.000-3.887   Tin shed on plot 1, push in from 0.8x to 1.0x of its frame. Ticker band slides up at 0.3 s; H1 "Local tycoon opens Tin-Shed Ghor, says it is "for the people"". pop on H1. Out: push slide left.
+  2  3.887-7.773   Plot #7 card at 1.7x; cursor enters, clicks "Grab it" at 1.3 s; on the click frame cut to the playground filling with sand trucks, slow pan. H2 "Playground in Mirpara relocated to "somewhere nicer"" lands on the click. whoosh in, click, pop. Out: push slide left.
+  3  7.773-10.688  Speed Money card at 1.8x; cursor clicks it at 1.0 s; red APPROVED stamp slams on the frame. H3 "Officer buys new car on government salary, credits "savings"". click, stamp impact. Out: whip left.
+  4  10.688-13.603 Election street: posters with the tycoon's face, bunting; pan right. H4 "Tycoon posters now outnumber trees in Mirpara". whoosh, pop. Out: staggered paper blocks.
+  5  13.603-17.490 Title on kraft: "Kalo Taka" letters print in 0.1 s apart, "Private Limited" under it, red stamp PAPERWORK OPTIONAL slams at 1.9 s (on the bar). Ticker away. impact-bass on the stamp.
+  6  17.490-21.377 The grown street by day, pan; at 2.0 s night sweeps in from the right edge (clip wipe 0.6 s power2.inOut) onto the city lit at night. H6 "Traffic jam in Mirpara now visible from space". whoosh on the wipe.
+  7  21.377-25.263 Dip cut; the inquiry stamp (Anti-Durniti Committee, 299 s) on the tallest building, punch-in 1.0 -> 1.12. H7 "Committee forms committee to investigate committee". pop.
+  8  25.263-31.093 Flee to Canada sheet at 1.3x; cursor clicks "Flee now" at 1.3 s; iris from the click onto the airport, tight on the tycoon and his suitcases; at 3.6 s cut to the Jamai in the hard hat, tight. The ticker carries the cutscene's own two lines: "Businessman goes abroad for medical treatment", then "Meanwhile, the Jamai arrives with a hard hat." riser peaking at the iris, click.
+  9  31.093-36.000 Claim "From tin shed to sky tower." then "Paperwork optional." on kraft; at 2.0 s the lockup "Kalo Taka Private Limited", the English | বাংলা toggle and "Play free: tanvirhafiz.github.io/kalo-taka" land and hold to the end; last 0.5 s fades to kraft.
+BANNED:  dark void ground; glow, bloom, particles; gradients; everything centred; every element fading and sliding up; text moving while read; titles drifting after they land; three cards in a row; a title over a dimmed screenshot; the logo docked in a corner; invented UI (every UI piece is a real capture); em dashes.
+QA:      frame 0 shows the shed and the ticker band (never blank); 2.0 s H1 fully readable; 5.2 s click on "Grab it" and the cut; 8.8 s stamp landed; 15.6 s full title with stamp; 19.6 s night wipe mid-way; 23.0 s committee stamp sharp; 26.5 s iris open on the airport; 33.5 s end card complete and still.

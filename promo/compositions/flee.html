@@ -1,0 +1,53 @@
+<template>
+  <style>
+
+@font-face { font-family: 'Baloo 2'; font-weight: 600; src: url('assets/fonts/baloo-2-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 700; src: url('assets/fonts/baloo-2-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 800; src: url('assets/fonts/baloo-2-latin-800-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 700; src: url('assets/fonts/baloo-da-2-bengali-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 800; src: url('assets/fonts/baloo-da-2-bengali-800-normal.woff2') format('woff2'); }
+
+
+#root { position: absolute; inset: 0; overflow: hidden; font-family: 'Baloo 2', 'Baloo Da 2', sans-serif; color: #3a2e25; }
+#root .stage { position: absolute; inset: 0; overflow: hidden; }
+#root .kb { position: absolute; inset: 0; }
+#root .shot { position: absolute; max-width: none; }
+#root .cursor { position: absolute; width: 90px; height: 126px; left: 0; top: 0; }
+#root .dim { position: absolute; inset: 0; background: #1b1712; opacity: 0; }
+
+
+#flee-cur-wrap { position: absolute; left: 0; top: 0; }
+#flee-air { clip-path: circle(0% at 1712px 507px); }
+#flee-jamai { opacity: 0; }
+
+  </style>
+  <div data-hf-id="hf-b3xf" id="root" data-composition-id="flee" data-width="1920" data-height="1080">
+
+    <div data-hf-id="hf-xxz5" id="flee-stage" class="stage">
+      <div data-hf-id="hf-u32z" id="flee-sheet" class="kb"><img data-hf-id="hf-apl0" class="shot" data-layout-allow-overflow="" src="assets/shots/sheet_flee.jpg" alt="" style="width:5120.0px;height:2880.0px;left:-3200.0px;top:0.0px;"></div>
+      <div data-hf-id="hf-gmch" id="flee-cur-wrap"><svg data-hf-id="hf-3nyc" class="cursor" viewBox="0 0 64 90" aria-hidden="true"><path data-hf-id="hf-wj8g" d="M6 4 L6 70 L22 56 L33 82 L45 77 L34 52 L56 52 Z" fill="#fbf6ea" stroke="#3a2e25" stroke-width="5" stroke-linejoin="round" /></svg></div>
+      <div data-hf-id="hf-7fee" id="flee-air" class="kb"><div data-hf-id="hf-cogi" id="flee-air-in" class="kb"><img data-hf-id="hf-8ibp" class="shot" data-layout-allow-overflow="" src="assets/shots/cutscene_airport.jpg" alt="" style="width:5120.0px;height:2880.0px;left:-320.0px;top:-1066.7px;"></div></div>
+      <div data-hf-id="hf-2drg" id="flee-jamai" class="kb"><img data-hf-id="hf-zqqk" class="shot" data-layout-allow-overflow="" src="assets/shots/cutscene_jamai.jpg" alt="" style="width:7979.2px;height:4488.3px;left:-3025.5px;top:-2327.3px;"></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const D = 6.33;
+
+    tl.fromTo("#flee-stage", { y: 1080 }, { y: 0, duration: 0.3, ease: "expo.out" }, 0.22);
+    tl.fromTo("#flee-cur-wrap", { x: 1500, y: 1100 }, { x: 1700, y: 500, duration: 0.55, ease: "power3.out" }, 0.55);
+    tl.to("#flee-cur-wrap", { scale: 0.86, duration: 0.07, ease: "power2.in" }, 1.28);
+    tl.to("#flee-cur-wrap", { scale: 1, duration: 0.1, ease: "power2.out" }, 1.35);
+    // iris from the click onto the airport
+    tl.fromTo("#flee-air", { clipPath: "circle(0% at 1712px 507px)" }, { clipPath: "circle(150% at 1712px 507px)", duration: 0.45, ease: "power2.in" }, 1.36);
+    tl.set("#flee-cur-wrap", { opacity: 0 }, 1.6);
+    tl.fromTo("#flee-air-in", { scale: 1 }, { scale: 1.06, duration: 2.3, ease: "power2.inOut" }, 1.4);
+    // cut on the bar to the Jamai
+    tl.set("#flee-jamai", { opacity: 1 }, 3.6);
+    tl.fromTo("#flee-jamai", { scale: 1.06 }, { scale: 1, duration: 2.2, ease: "expo.out" }, 3.6);
+    // blur swap into the end card
+    tl.to("#flee-stage", { opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power2.in" }, D - 0.45);
+
+    window.__timelines["flee"] = tl;
+  </script>
+</template>

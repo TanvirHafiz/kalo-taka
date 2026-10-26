@@ -1,0 +1,45 @@
+<template>
+  <style>
+
+@font-face { font-family: 'Baloo 2'; font-weight: 600; src: url('assets/fonts/baloo-2-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 700; src: url('assets/fonts/baloo-2-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 800; src: url('assets/fonts/baloo-2-latin-800-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 700; src: url('assets/fonts/baloo-da-2-bengali-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 800; src: url('assets/fonts/baloo-da-2-bengali-800-normal.woff2') format('woff2'); }
+
+
+#root { position: absolute; inset: 0; overflow: hidden; font-family: 'Baloo 2', 'Baloo Da 2', sans-serif; color: #3a2e25; }
+#root .stage { position: absolute; inset: 0; overflow: hidden; }
+#root .kb { position: absolute; inset: 0; }
+#root .shot { position: absolute; max-width: none; }
+#root .cursor { position: absolute; width: 90px; height: 126px; left: 0; top: 0; }
+#root .dim { position: absolute; inset: 0; background: #1b1712; opacity: 0; }
+
+
+#city-night { clip-path: inset(0 0 0 100%); }
+
+  </style>
+  <div data-hf-id="hf-ppzw" id="root" data-composition-id="city" data-width="1920" data-height="1080">
+
+    <div data-hf-id="hf-tuzc" id="city-stage" class="stage">
+      <div data-hf-id="hf-iavj" id="city-pan" class="kb" data-layout-allow-overflow="">
+        <div data-hf-id="hf-jd15" id="city-day" class="kb"><img data-hf-id="hf-e0f6" class="shot" data-layout-allow-overflow="" src="assets/shots/city_day_wide.jpg" alt="" style="width:3840.0px;height:2160.0px;left:0.0px;top:-1080.0px;"></div>
+        <div data-hf-id="hf-it51" id="city-night" class="kb"><img data-hf-id="hf-fscu" class="shot" data-layout-allow-overflow="" src="assets/shots/city_night_wide.jpg" alt="" style="width:3840.0px;height:2160.0px;left:0.0px;top:-1080.0px;"></div>
+      </div>
+      <div data-hf-id="hf-csi8" id="city-dim" class="dim"></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const D = 4.387;
+
+    tl.to("#city-stage", { keyframes: { "0%": { x: 1920, y: 0 }, "11.45%": { x: 0, y: 0 }, "100%": { x: 3.134, y: 0, ease: "none" }, easeEach: "power3.inOut" }, duration: 4.367 }, 0);
+    tl.to("#city-pan", { keyframes: { "0%": { x: 0, y: 0 }, "100%": { x: -3.134, y: 0 }, easeEach: "none" }, duration: 4.387 }, 0);
+    // night arrives from the right edge on the bar line
+    tl.fromTo("#city-night", { clipPath: "inset(0 0 0 100%)" }, { clipPath: "inset(0 0 0 0%)", duration: 0.6, ease: "power2.inOut" }, 2.19);
+    // dip before the cut to the inquiry
+    tl.to("#city-dim", { opacity: 0.4, duration: 0.1, ease: "none" }, D - 0.35);
+
+    window.__timelines["city"] = tl;
+  </script>
+</template>

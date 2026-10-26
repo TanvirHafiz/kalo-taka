@@ -1,0 +1,49 @@
+<template>
+  <style>
+
+@font-face { font-family: 'Baloo 2'; font-weight: 600; src: url('assets/fonts/baloo-2-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 700; src: url('assets/fonts/baloo-2-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 800; src: url('assets/fonts/baloo-2-latin-800-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 700; src: url('assets/fonts/baloo-da-2-bengali-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 800; src: url('assets/fonts/baloo-da-2-bengali-800-normal.woff2') format('woff2'); }
+
+
+#root { position: absolute; inset: 0; overflow: hidden; font-family: 'Baloo 2', 'Baloo Da 2', sans-serif; color: #3a2e25; }
+#root .stage { position: absolute; inset: 0; overflow: hidden; }
+#root .kb { position: absolute; inset: 0; }
+#root .shot { position: absolute; max-width: none; }
+#root .cursor { position: absolute; width: 90px; height: 126px; left: 0; top: 0; }
+#root .dim { position: absolute; inset: 0; background: #1b1712; opacity: 0; }
+
+
+#speed-kb { transform-origin: 1195px 441px; }
+#speed-cur-wrap { position: absolute; left: 0; top: 0; }
+#speed-stamp-wrap { position: absolute; left: 1180px; top: 640px; }
+#speed-stamp { font-weight: 800; font-size: 120px; line-height: 1; letter-spacing: 0.02em; color: #c8553d;
+  border: 12px solid #c8553d; border-radius: 18px; padding: 18px 40px 8px; background: rgba(251,246,234,0.86); }
+
+  </style>
+  <div data-hf-id="hf-ch7u" id="root" data-composition-id="speed" data-width="1920" data-height="1080">
+
+    <div data-hf-id="hf-hyn0" id="speed-stage" class="stage">
+      <div data-hf-id="hf-dm2o" id="speed-kb" class="kb"><img data-hf-id="hf-g9o1" class="shot" data-layout-allow-overflow="" src="assets/shots/card_speed.jpg" alt="" style="width:6826.7px;height:3840.0px;left:-4906.7px;top:0.0px;"></div>
+      <div data-hf-id="hf-lnto" id="speed-cur-wrap"><svg data-hf-id="hf-3nyc" class="cursor" viewBox="0 0 64 90" aria-hidden="true"><path data-hf-id="hf-wj8g" d="M6 4 L6 70 L22 56 L33 82 L45 77 L34 52 L56 52 Z" fill="#fbf6ea" stroke="#3a2e25" stroke-width="5" stroke-linejoin="round" /></svg></div>
+      <div data-hf-id="hf-44u1" id="speed-stamp-wrap"><div data-hf-id="hf-4q0j" id="speed-stamp">APPROVED</div></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const D = 3.415;
+
+    tl.fromTo("#speed-stage", { x: 1920 }, { x: 0, duration: 0.5, ease: "power3.inOut" }, 0);
+    tl.fromTo("#speed-kb", { scale: 1 }, { scale: 1.08, duration: 2.0, ease: "power2.inOut" }, 0.3);
+    tl.fromTo("#speed-cur-wrap", { x: 1700, y: 1100 }, { x: 1187, y: 435, duration: 0.6, ease: "power3.out" }, 0.4);
+    tl.to("#speed-cur-wrap", { scale: 0.86, duration: 0.07, ease: "power2.in" }, 1.18);
+    tl.to("#speed-cur-wrap", { scale: 1, duration: 0.1, ease: "power2.out" }, 1.25);
+    // the stamp slams down a beat after the click
+    tl.fromTo("#speed-stamp", { scale: 1.8, rotation: -14, opacity: 0 }, { scale: 1, rotation: -8, opacity: 1, duration: 0.3, ease: "back.out(2.2)" }, 1.42);
+tl.to("#speed-stage", { x: -760, filter: "blur(18px)", duration: 0.25, ease: "power3.in" }, D - 0.5);
+    tl.set("#speed-stage", { opacity: 0 }, D - 0.25);
+    window.__timelines["speed"] = tl;
+  </script>
+</template>

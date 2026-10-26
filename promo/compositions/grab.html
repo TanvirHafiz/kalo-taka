@@ -1,0 +1,47 @@
+<template>
+  <style>
+
+@font-face { font-family: 'Baloo 2'; font-weight: 600; src: url('assets/fonts/baloo-2-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 700; src: url('assets/fonts/baloo-2-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 800; src: url('assets/fonts/baloo-2-latin-800-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 700; src: url('assets/fonts/baloo-da-2-bengali-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo Da 2'; font-weight: 800; src: url('assets/fonts/baloo-da-2-bengali-800-normal.woff2') format('woff2'); }
+
+
+#root { position: absolute; inset: 0; overflow: hidden; font-family: 'Baloo 2', 'Baloo Da 2', sans-serif; color: #3a2e25; }
+#root .stage { position: absolute; inset: 0; overflow: hidden; }
+#root .kb { position: absolute; inset: 0; }
+#root .shot { position: absolute; max-width: none; }
+#root .cursor { position: absolute; width: 90px; height: 126px; left: 0; top: 0; }
+#root .dim { position: absolute; inset: 0; background: #1b1712; opacity: 0; }
+
+
+#grab-fill { opacity: 0; transform-origin: 50% 60%; }
+#grab-cur-wrap { position: absolute; left: 0; top: 0; }
+
+  </style>
+  <div data-hf-id="hf-nt6x" id="root" data-composition-id="grab" data-width="1920" data-height="1080">
+
+    <div data-hf-id="hf-behj" id="grab-stage" class="stage">
+      <div data-hf-id="hf-f3ju" id="grab-card" class="kb"><img data-hf-id="hf-qpbi" class="shot" data-layout-allow-overflow="" src="assets/shots/card_grab.jpg" alt="" style="width:6826.7px;height:3840.0px;left:-4906.7px;top:0.0px;"></div>
+      <div data-hf-id="hf-roi3" id="grab-fill" class="kb"><img data-hf-id="hf-v16x" class="shot" data-layout-allow-overflow="" src="assets/shots/grab_fill.jpg" alt="" style="width:4608.0px;height:2592.0px;left:-1440.0px;top:-1104.0px;"></div>
+      <div data-hf-id="hf-pyuf" id="grab-cur-wrap"><svg data-hf-id="hf-3nyc" class="cursor" viewBox="0 0 64 90" aria-hidden="true"><path data-hf-id="hf-wj8g" d="M6 4 L6 70 L22 56 L33 82 L45 77 L34 52 L56 52 Z" fill="#fbf6ea" stroke="#3a2e25" stroke-width="5" stroke-linejoin="round" /></svg></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const D = 4.386;
+
+    tl.fromTo("#grab-stage", { x: 1920 }, { x: 0, duration: 0.5, ease: "power3.inOut" }, 0);
+    // the cursor comes in from the lower right and clicks "Grab it"
+    tl.fromTo("#grab-cur-wrap", { x: 1700, y: 1100 }, { x: 1187, y: 599, duration: 0.7, ease: "power3.out" }, 0.5);
+    tl.to("#grab-cur-wrap", { scale: 0.86, duration: 0.07, ease: "power2.in" }, 1.47);
+    tl.to("#grab-cur-wrap", { scale: 1, duration: 0.1, ease: "power2.out" }, 1.54);
+    // cut on the click to the playground under sand trucks
+    tl.set("#grab-fill", { opacity: 1 }, 1.55);
+    tl.set("#grab-cur-wrap", { opacity: 0 }, 1.55);
+    tl.fromTo("#grab-fill", { scale: 1.06 }, { scale: 1.16, x: -60, duration: D - 2.1, ease: "power2.inOut" }, 1.55);
+tl.to("#grab-stage", { x: -1920, duration: 0.5, ease: "power3.inOut" }, D - 0.5);
+    window.__timelines["grab"] = tl;
+  </script>
+</template>
